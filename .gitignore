@@ -1,0 +1,14 @@
+/Binaries/
+/DerivedDataCache/
+/Intermediate/
+/Saved/
+/.vs/
+/*.sln
+/*.xcworkspace/
+/*.xcodeproj/
+.DS_Store
+__pycache__/
+*.pyc
+
+# Regenerate Epic example content from your own engine installation.
+/Content/Prototype/Mannequin/

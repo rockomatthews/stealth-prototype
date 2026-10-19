@@ -1,0 +1,3 @@
+import stealth_tools
+from toolset_registry._registry_interface import register_toolset_classes
+register_toolset_classes([stealth_tools.StealthProjectTools])
