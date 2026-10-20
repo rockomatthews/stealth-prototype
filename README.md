@@ -2,6 +2,8 @@
 
 Status: **development prototype built against Unreal 5.8.3 on this Mac**. Native editor MCP is connected locally. Automated gameplay observations are recorded in `Saved/acceptance.json`; see `VALIDATION.md` for verified coverage and remaining checks. Character meshes are temporary mannequins with proxy gear, not finished character art.
 
+The intended console target is Xbox Series X|S. Xbox controller input is implemented for both roles, including sticks, A/B traversal/crouch, X hacking, triggers for attack/aim and Y equipment. See [XBOX.md](XBOX.md) for controls, Mac playtesting and the later console build requirements.
+
 ## Character concepts first
 
 - `Art/Concepts/spy-v2-flip-up-goggles.png`: lean infiltrator, charcoal fabric, compact harness, climbing equipment, and binocular night-vision goggles on a flip-up mount. This supersedes the historical monocular design.

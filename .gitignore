@@ -10,5 +10,5 @@
 __pycache__/
 *.pyc
 
-# Regenerate Epic example content from your own engine installation.
+# Recreate Epic example content from your own Unreal installation.
 /Content/Prototype/Mannequin/

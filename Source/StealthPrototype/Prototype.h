@@ -56,6 +56,8 @@ class STEALTHPROTOTYPE_API ASPCharacter : public ACharacter
 public:
     ASPCharacter(const FObjectInitializer& ObjectInitializer);
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+    virtual void UnPossessed() override;
     virtual void Tick(float DeltaSeconds) override;
     virtual void SetupPlayerInputComponent(UInputComponent* Input) override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -72,6 +74,18 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Combat") float ShotDamage = 34.f;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Combat") float TakedownReach = 180.f;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Interaction") float HackReach = 200.f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Controller", meta=(ClampMin="0",ClampMax="0.5")) float StickDeadZone = .18f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Controller") float ControllerYawRate = 150.f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Controller") float ControllerPitchRate = 110.f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Controller") bool bInvertControllerY = false;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Controller") float AimSensitivity = .45f;
+    bool IsAiming() const { return bAiming && !IsSpy() && Health>0; }
+    bool FlashlightEnabled() const { return bFlashlight; }
+    float GogglePitch() const;
+    float CameraDistance() const;
+    float CameraFOV() const;
+    float ActualCameraOffset() const;
+    TArray<FString> InputKeys() const;
     UFUNCTION(BlueprintCallable) void PracticeRole();
     UFUNCTION(Server, Reliable, BlueprintCallable) void ServerTraversal();
     UFUNCTION(Server, Reliable, BlueprintCallable) void ServerDrop();
@@ -106,6 +120,10 @@ protected:
     UFUNCTION(Server, Reliable) void ServerFlashlight();
     void Move(const FInputActionValue& Value);
     void Look(const FInputActionValue& Value);
+    void LookGamepad(const FInputActionValue& Value);
+    void EquipmentPressed();
+    void AimPressed();
+    void AimReleased();
     void NightVision();
     void UpdateAnimation(float Delta);
     UFUNCTION(NetMulticast, Unreliable) void MulticastSound(USoundBase* Sound, FVector Location);
@@ -121,6 +139,8 @@ protected:
     void AttackPressed();
     bool bInteractHeld = false;
     bool bRoleConfigured = false;
+    bool bAiming = false;
+    float GoggleAngle = -105.f;
     double LastAttackTime = -10.0;
 };
 
@@ -146,9 +166,16 @@ class STEALTHPROTOTYPE_API ASPPlayerController : public APlayerController
 {
     GENERATED_BODY()
 public:
+    virtual bool InputKey(const FInputKeyEventArgs& Params) override;
+    bool UsingGamepad() const { return bUsingGamepad; }
     UFUNCTION(Client,Reliable) void ClientExercise(const FString& Action);
     UFUNCTION(Exec) void Practice();
     UFUNCTION(Exec) void Match();
+private:
+    bool bUsingGamepad = false;
+#if WITH_EDITOR
+    bool bAutomatedInput = false;
+#endif
 };
 
 UCLASS()
@@ -179,5 +206,6 @@ class STEALTHPROTOTYPE_API ASPHUD : public AHUD
 {
     GENERATED_BODY()
 public:
+    float LastDrawTime = -1.f;
     virtual void DrawHUD() override;
 };

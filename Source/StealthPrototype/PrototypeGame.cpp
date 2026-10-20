@@ -3,9 +3,21 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerInput.h"
 #include "GameFramework/PlayerStart.h"
 #include "Net/UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
+#include "InputKeyEventArgs.h"
+
+bool ASPPlayerController::InputKey(const FInputKeyEventArgs& Params)
+{
+#if WITH_EDITOR
+    if (bAutomatedInput && !Params.IsSimulatedInput()) return true;
+#endif
+    if (Params.Event!=IE_Released && FMath::Abs(Params.AmountDepressed)>.2f)
+        bUsingGamepad=Params.Key.IsGamepadKey();
+    return Super::InputKey(Params);
+}
 
 void ASPPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -103,6 +115,7 @@ void ASPGameMode::PostLogin(APlayerController* NewPlayer)
 void ASPGameMode::Logout(AController* Exiting)
 {
     Super::Logout(Exiting);
+    if (GetWorld()->bIsTearingDown || GetWorld()->IsBeingCleanedUp()) return;
     RefreshRoster(Exiting);
     ResetRound(Exiting);
 }
@@ -181,12 +194,18 @@ void ASPHUD::DrawHUD()
     const ASPGameState* GS = GetWorld()->GetGameState<ASPGameState>();
     const ASPCharacter* Pawn = Cast<ASPCharacter>(PlayerOwner->GetPawn());
     if (!GS || !Pawn) return;
+    LastDrawTime=GetWorld()->GetTimeSeconds();
     const FLinearColor White = FLinearColor::White;
     const FLinearColor Accent = Pawn->IsSpy() ? FLinearColor(.2f,.75f,1.f) : FLinearColor(1.f,.6f,.2f);
-    DrawRect(FLinearColor(0,0,0,.7f), 16,16,650,145);
-    DrawText(Pawn->IsSpy() ? TEXT("SPY | THIRD PERSON") : TEXT("MERC | FIRST PERSON"), Accent, 28,26);
+    const float Scale=FMath::Min(Canvas->ClipX/900.f,Canvas->ClipY/500.f);
+    auto Text=[this,Scale](const FString& Value,FLinearColor Color,float X,float Y)
+    {DrawText(Value,Color,X*Scale,Y*Scale,nullptr,Scale);};
+    DrawRect(FLinearColor(0,0,0,.7f),16*Scale,16*Scale,760*Scale,145*Scale);
+    Text(Pawn->IsSpy() ? TEXT("SPY | THIRD PERSON") : TEXT("MERC | FIRST PERSON"), Accent, 28,26);
     FString Status;
-    if (GS->bPractice) Status = TEXT("SOLO PRACTICE | Tab swaps role | Scores disabled");
+    const ASPPlayerController* PC=Cast<ASPPlayerController>(PlayerOwner);
+    const bool Pad=PC && PC->UsingGamepad();
+    if (GS->bPractice) Status = Pad?TEXT("SOLO PRACTICE | D-pad Right swaps role | Scores disabled"):TEXT("SOLO PRACTICE | Tab swaps role | Scores disabled");
     else if (GS->Phase == ESPPhase::Waiting)
         Status = FString::Printf(TEXT("Waiting for 4 players | Spies %d/2 | Mercs %d/2"), GS->Spies, GS->Mercs);
     else if (GS->Phase == ESPPhase::SpiesWin) Status = TEXT("SPIES WIN | Restarting in 8 seconds");
@@ -194,15 +213,15 @@ void ASPHUD::DrawHUD()
     else Status = FString::Printf(TEXT("Time %d:%02d | Terminal hacked %d%% | Health %d"),
         FMath::CeilToInt(GS->RoundSeconds)/60, FMath::CeilToInt(GS->RoundSeconds)%60,
         FMath::RoundToInt(GS->HackProgress*100), FMath::RoundToInt(Pawn->Health));
-    DrawText(Status, White,28,52);
-    DrawText(TEXT("WASD move | Mouse look | Ctrl crouch | Space jump / vault / climb"), White,28,78);
-    DrawText(Pawn->IsSpy() ? TEXT("E hack | Click rear takedown | N night vision | Ctrl drop")
-        : TEXT("Click: shoot (3 hits) | F: flashlight | Defend the central terminal"), White,28,104);
-    DrawText(TEXT("PROTOTYPE | Original game, placeholder character art"), White,28,130);
-    if (Pawn->FeedbackUntil > GetWorld()->GetTimeSeconds()) DrawText(Pawn->Feedback,Accent,28,180);
-    if (Pawn->Traversal()->Motion.State == ESPTraversal::Hanging) DrawText(TEXT("HANGING | Space climb | Ctrl drop"),Accent,28,205);
-    if (Pawn->NightVisionEnabled()) DrawText(TEXT("NIGHT VISION"),Accent,28,230);
-    if (Pawn->Health <= 0.f) DrawText(TEXT("DOWN | Respawn after 5 seconds"), Accent,28,180);
+    Text(Status, White,28,52);
+    Text(Pad?TEXT("LS move | RS look | B crouch / drop | A jump / vault / climb"):TEXT("WASD move | Mouse look | Ctrl crouch | Space jump / vault / climb"), White,28,78);
+    Text(Pawn->IsSpy() ? (Pad?TEXT("Hold X hack | RT rear takedown | Y goggles up / down"):TEXT("E hack | Click rear takedown | N goggles up / down | Ctrl drop"))
+        : (Pad?TEXT("RT shoot | Hold LT aim | Y flashlight | Defend terminal"):TEXT("Click shoot | Hold right mouse aim | F flashlight")), White,28,104);
+    Text(TEXT("PROTOTYPE | Original game, placeholder character art"), White,28,130);
+    if (Pawn->FeedbackUntil > GetWorld()->GetTimeSeconds()) Text(Pawn->Feedback,Accent,28,180);
+    if (Pawn->Traversal()->Motion.State == ESPTraversal::Hanging) Text(Pad?TEXT("HANGING | A climb | B drop"):TEXT("HANGING | Space climb | Ctrl drop"),Accent,28,205);
+    if (Pawn->NightVisionEnabled()) Text(TEXT("NIGHT VISION"),Accent,28,230);
+    if (Pawn->Health <= 0.f) Text(TEXT("DOWN | Respawn after 5 seconds"), Accent,28,180);
     DrawLine(Canvas->ClipX/2-6,Canvas->ClipY/2,Canvas->ClipX/2+6,Canvas->ClipY/2,Accent);
     DrawLine(Canvas->ClipX/2,Canvas->ClipY/2-6,Canvas->ClipX/2,Canvas->ClipY/2+6,Accent);
 }
@@ -210,6 +229,20 @@ void ASPHUD::DrawHUD()
 void ASPPlayerController::ClientExercise_Implementation(const FString& Action)
 {
 #if WITH_EDITOR
+    if (Action==TEXT("automation_on") || Action==TEXT("automation_off"))
+    {bAutomatedInput=Action==TEXT("automation_on");if (PlayerInput) PlayerInput->FlushPressedKeys();return;}
+    const TMap<FString,FKey> PadKeys={{TEXT("a"),EKeys::Gamepad_FaceButton_Bottom},{TEXT("b"),EKeys::Gamepad_FaceButton_Right},
+        {TEXT("x"),EKeys::Gamepad_FaceButton_Left},{TEXT("y"),EKeys::Gamepad_FaceButton_Top},
+        {TEXT("rt"),EKeys::Gamepad_RightTrigger},{TEXT("lt"),EKeys::Gamepad_LeftTrigger},
+        {TEXT("role"),EKeys::Gamepad_DPad_Right},{TEXT("move"),EKeys::Gamepad_LeftY},{TEXT("drift"),EKeys::Gamepad_LeftY},{TEXT("look"),EKeys::Gamepad_RightX}};
+    if (Action.StartsWith(TEXT("pad_")))
+    {
+        FString Button=Action.Mid(4);const bool Released=Button.RemoveFromEnd(TEXT("_up"));
+        Button.RemoveFromEnd(TEXT("_down"));
+        if (const FKey* Key=PadKeys.Find(Button))
+            InputKey(FInputKeyEventArgs::CreateSimulated(*Key,Key->IsAnalog()?IE_Axis:(Released?IE_Released:IE_Pressed),Released?0.f:(Button==TEXT("drift")?.1f:1.f)));
+        return;
+    }
     if (ASPCharacter* Pawn=Cast<ASPCharacter>(GetPawn())) Pawn->Exercise(Action);
 #endif
 }

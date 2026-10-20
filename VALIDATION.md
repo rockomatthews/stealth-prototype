@@ -1,38 +1,33 @@
-# Checkpoint — October 19, 2026
+# Current checkpoint — October 19, 2026
 
-Stopped at the user's request. No further feature work should start until resumed.
+Xbox controller support is implemented and the Unreal 5.8.3 Development Editor build succeeds on this Mac. **44/44 automated gameplay checks passed**; see [TEST_RESULTS.md](TEST_RESULTS.md). The project is ready for a focused human controller playtest, with temporary art.
 
-## Verified
+## Verified foundation
 
-- Unreal 5.8.3 Editor target compiled successfully on this Mac with full Xcode and the Metal Toolchain.
-- Latest build uses `-NoHotReloadFromIDE`; `Binaries/Mac/UnrealEditor.modules` now names `libUnrealEditor-StealthPrototype.dylib`. Use this flag while any other Unreal editor is open, otherwise UBT may produce a numbered module without updating the launch manifest.
-- Project/map identity and selection were read through native Unreal MCP. Assets saved through the editor. The local endpoint is restricted to loopback.
-- Imported mannequin and eight animation clips are project assets. Skeletal-material usage and root locking were saved.
-- Earlier runtime tests passed solo practice, role switching, skeletal mesh presence, ledge catching, dropping, low vaulting, timer victory and round reset. These observations precede the final source fixes and do not establish a complete playable match.
+- Solo practice and competitive mode remain separate. Practice uses D-pad Right or Tab to switch role; scoring is disabled. Competitive PIE starts with four possessed characters and two players per team.
+- Xbox sticks, radial dead zone, A traversal, B crouch/drop, X hacking, RT combat, LT merc aiming and Y role equipment run through Enhanced Input. Look rate is frame-rate independent; tuning and invert Y are Blueprint defaults.
+- Spy camera actually sits behind the character on its spring-arm socket; merc camera is first person. Local HUD drawing and correct camera offsets were checked in all four clients. The controller prompts and both rendered views were inspected.
+- Remote goggles, hanging and climbing replicate. Climbing was checked with 100 ms lag and 2% packet loss, with final position agreement within 25 cm. Death cancels traversal; the player respawns.
+- Cover blocks shots, merc shots deal 34 damage, three shots down a spy, front takedowns are rejected and rear takedowns succeed. Remote hacking, both team wins and round reset pass.
+- Project/map identity and selection were read through native MCP. Editor assets are saved. The endpoint binds loopback only.
 
-## Implemented, awaiting complete validation
+## Current art and Xbox scope
 
-Enhanced Input; role cameras; temporary character animations and gear; warehouse blockout; server match rules; footsteps/shots; replicated flashlight/night vision; CharacterMovement root-motion traversal; editor-only acceptance fixtures.
+The spy uses binocular flip-up goggles. Current references are `Art/Concepts/spy-v2-flip-up-goggles.png` and `spy-apose-v2-flip-up-goggles.png`. Merc references remain masked and SWAT-like. Runtime meshes, weapon and gear are placeholders; no final custom rigged characters or first-person arms have been made.
 
-The spy design now uses binocular goggles on a flip-up mount. N toggles night vision and animates the proxy hinge. Current references are `Art/Concepts/spy-v2-flip-up-goggles.png` and `spy-apose-v2-flip-up-goggles.png`. Historical v1 references remain for provenance. These are modeling references, not finished rigged characters.
+Xbox Series X|S is the current console target. Mac testing does not produce an Xbox console build. See [XBOX.md](XBOX.md) for controller controls and the Windows, Xbox developer access and console hardware requirements. No SDK enrollment, purchase, console packaging or certification has occurred.
 
-## Resume here
+## Resume with the human playtest
 
-1. Verify the opened project is `StealthPrototype` and that runtime reports include `motionDuration` (confirms the rebuilt module is loaded).
-2. Run `python3 Scripts/run_acceptance.py` with the editor open. The latest attempted run used a stale hot-reload module and was stopped; its partial `Saved/acceptance.json` must not be treated as a final result.
-3. Recheck four *possessed pawns*, one local pawn per PIE world, plus 2v2 teams. Earlier four-client sessions had only two pawns. Source now assigns teams before Super::PostLogin, clears the cached start spot, and moves spawns away from platform collision; these fixes compile but have not been runtime verified.
-4. Check ledge hanging settles with motionDuration zero, then climb. Solo climb passed in the stale-module run after background throttling was disabled, but remote traversal still needs verification.
-5. Test goggle orientation/visibility on the animated head, N down/up replication, first-person clipping, flashlight, blocked shots/hacks, rear-only takedowns, death during climbing, disconnect/rejoin, latency/loss and Mac performance.
-6. Inspect rendered gameplay before claiming visual QA. Use small low-scalability windows for four clients.
+1. Connect the Xbox controller and click the solo practice game window. Move either stick to switch the HUD to Xbox hints. Use D-pad Right to compare roles, A at north platforms and low cover, B to drop, and Y for goggles/flashlight.
+2. Judge sensitivity, turning, crouch speed, camera collision, dark-area readability and comfort. Tune ControllerYawRate, ControllerPitchRate, StickDeadZone, bInvertControllerY, AimSensitivity and role speeds in BP_Player defaults.
+3. Still verify physical controller disconnect/reconnect, keyboard-to-pad switching under real hardware, blocked hacking, deliberately invalid/blocked ledges, disconnect/rejoin and prolonged play. Multi-process/multi-machine tests and controlled GPU profiling remain outstanding.
+4. Final character modeling, UVs, textures, skinning, polished animation/first-person arms and a detailed industrial environment follow the movement feel test. Milestones D/E are not fully complete.
 
-No final custom character meshes, skinning, polished traversal animation or first-person arms have been produced. Gameplay feel still needs the user's playtest. Milestones C–E are not complete.
+## Build and automated checks
 
-## Rebuild
+After saving, close only this project's editor and run `bash Scripts/setup_mac.sh` (default engine `/Users/rob/Games/UE_5.8`). The build uses `-NoHotReloadFromIDE` so another open editor cannot leave the launch manifest pointing at a stale numbered module.
 
-Close only this project's editor after saving, then:
+With this editor open, `python3 Scripts/run_acceptance.py` runs the bounded editor-only fixtures, temporarily isolates physical gameplay input to avoid interference, and restores ordinary solo practice afterward. Avoid closing PIE during that run. Snapshots and build logs live in ignored Saved/. Current game/test source is committed; no runtime LLMs or bots are involved.
 
-```sh
-bash /Users/rob/Games/UE_5.8/Engine/Build/BatchFiles/Mac/Build.sh StealthPrototypeEditor Mac Development /Users/rob/Documents/ChatGPT/rocketship.codes/stealth-prototype/StealthPrototype.uproject -WaitMutex -MaxParallelActions=3 -NoHotReloadFromIDE
-```
-
-Keep unrelated editor sessions and unrelated repository files intact. No user-file cleanup, purchases, optional large content downloads or internet hosting are part of this work.
+The public source repository excludes Epic mannequin binaries and local generated files; [PUBLICATION.md](PUBLICATION.md) describes the safe export workflow. No user-file cleanup, purchases, optional large content downloads or internet hosting are included.

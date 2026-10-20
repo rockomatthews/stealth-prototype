@@ -6,6 +6,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
 #include "Engine/DamageEvents.h"
 #include "EnhancedInputComponent.h"
@@ -35,7 +36,7 @@ ASPCharacter::ASPCharacter(const FObjectInitializer& Init)
     GetCharacterMovement()->RotationRate=FRotator(0,540,0);
     Boom=CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));Boom->SetupAttachment(RootComponent);
     Boom->SetRelativeLocation(FVector(0,0,60));Boom->bUsePawnControlRotation=true;
-    Camera=CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));Camera->SetupAttachment(Boom);
+    Camera=CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));Camera->SetupAttachment(Boom,USpringArmComponent::SocketName);
     Camera->FieldOfView=85;
     Body=CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FallbackBody"));Body->SetupAttachment(RootComponent);
     Body->SetRelativeScale3D(FVector(.55,.4,1.25));Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -84,6 +85,20 @@ bool ASPCharacter::IsSpy() const
 {
     const ASPPlayerState* PS=GetPlayerState<ASPPlayerState>();return PS && PS->Team==ESPTeam::Spy;
 }
+void ASPCharacter::EndPlay(const EEndPlayReason::Type Reason)
+{
+    if (APlayerController* PC=Cast<APlayerController>(Controller))
+        if (auto* Sub=ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+            if (Mapping) Sub->RemoveMappingContext(Mapping);
+    Super::EndPlay(Reason);
+}
+void ASPCharacter::UnPossessed()
+{
+    if (APlayerController* PC=Cast<APlayerController>(Controller))
+        if (auto* Sub=ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+            if (Mapping) Sub->RemoveMappingContext(Mapping);
+    Super::UnPossessed();
+}
 bool ASPCharacter::IsRoundActive() const
 {
     const ASPGameState* GS=GetWorld()->GetGameState<ASPGameState>();
@@ -92,6 +107,7 @@ bool ASPCharacter::IsRoundActive() const
 void ASPCharacter::ConfigureRole()
 {
     if (!GetPlayerState<ASPPlayerState>()) return;
+    bAiming=false;
     const bool Spy=IsSpy();Boom->TargetArmLength=Spy?SpyCameraDistance:0;
     Boom->SocketOffset=Spy?FVector(0,40,0):FVector::ZeroVector;
     bUseControllerRotationYaw=!Spy;GetCharacterMovement()->bOrientRotationToMovement=Spy;
@@ -119,11 +135,14 @@ void ASPCharacter::Tick(float Delta)
     GetMesh()->SetVisibility(Health>0);Mask->SetVisibility(Health>0 && HasMesh);Vest->SetVisibility(Health>0 && HasMesh && !IsSpy());
     Gun->SetVisibility(Health>0 && !IsSpy());
     GoggleLeft->SetVisibility(Health>0 && HasMesh && IsSpy());GoggleRight->SetVisibility(Health>0 && HasMesh && IsSpy());
-    GoggleHinge->SetRelativeRotation(FMath::RInterpTo(GoggleHinge->GetRelativeRotation(),FRotator(bNightVision?0.f:-105.f,0,0),Delta,10.f));
+    // Keep the hinge angle scalar: Euler decomposition flips axes beyond 90 degrees.
+    GoggleAngle=FMath::FInterpTo(GoggleAngle,bNightVision?0.f:-105.f,Delta,10.f);
+    GoggleHinge->SetRelativeRotation(FRotator(GoggleAngle,0,0));
     Flashlight->SetWorldRotation(GetBaseAimRotation());Flashlight->SetVisibility(bFlashlight && !IsSpy() && Health>0);
     if ((!IsSpy() || Health<=0) && bNightVision) { NightVision(); }
     if (IsLocallyControlled())
     {
+        Camera->FieldOfView=FMath::FInterpTo(Camera->FieldOfView,IsAiming()?65.f:85.f,Delta,12.f);
         Camera->PostProcessSettings.bOverride_ColorGain=true;
         Camera->PostProcessSettings.ColorGain=bNightVision?FVector4(.8f,2.8f,.8f,1.f):FVector4(1,1,1,1);
         Camera->PostProcessSettings.bOverride_AutoExposureBias=true;
@@ -169,25 +188,42 @@ void ASPCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     };
     Axis(EKeys::W,true,false);Axis(EKeys::S,true,true);Axis(EKeys::D,false,false);Axis(EKeys::A,false,true);
     EI->BindAction(MoveAction,ETriggerEvent::Triggered,this,&ASPCharacter::Move);
+    auto DeadZone=[this](FEnhancedActionKeyMapping& Key)
+    {auto* Zone=NewObject<UInputModifierDeadZone>(this);Zone->LowerThreshold=StickDeadZone;Zone->UpperThreshold=.95f;Zone->Type=EDeadZoneType::Radial;Key.Modifiers.Add(Zone);};
+    DeadZone(Mapping->MapKey(MoveAction,EKeys::Gamepad_Left2D));
     UInputAction* LookAction=Action(EInputActionValueType::Axis2D);
     Mapping->MapKey(LookAction,EKeys::MouseX);
     auto& MouseY=Mapping->MapKey(LookAction,EKeys::MouseY);
     MouseY.Modifiers.Add(NewObject<UInputModifierNegate>(this));
     auto* Swizzle=NewObject<UInputModifierSwizzleAxis>(this);Swizzle->Order=EInputAxisSwizzle::YXZ;MouseY.Modifiers.Add(Swizzle);
     EI->BindAction(LookAction,ETriggerEvent::Triggered,this,&ASPCharacter::Look);
+    UInputAction* PadLook=Action(EInputActionValueType::Axis2D);
+    DeadZone(Mapping->MapKey(PadLook,EKeys::Gamepad_Right2D));
+    EI->BindAction(PadLook,ETriggerEvent::Triggered,this,&ASPCharacter::LookGamepad);
     auto Button=[&](FKey Key,auto Function)
     {UInputAction* A=Action(EInputActionValueType::Boolean);Mapping->MapKey(A,Key);EI->BindAction(A,ETriggerEvent::Started,this,Function);return A;};
     UInputAction* JumpAction=Button(EKeys::SpaceBar,&ASPCharacter::JumpPressed);
     EI->BindAction(JumpAction,ETriggerEvent::Completed,this,&ACharacter::StopJumping);
-    Button(EKeys::LeftControl,&ASPCharacter::CrouchPressed);
+    Mapping->MapKey(JumpAction,EKeys::Gamepad_FaceButton_Bottom);
+    UInputAction* CrouchAction=Button(EKeys::LeftControl,&ASPCharacter::CrouchPressed);
+    Mapping->MapKey(CrouchAction,EKeys::Gamepad_FaceButton_Right);
     UInputAction* HackAction=Button(EKeys::E,&ASPCharacter::InteractPressed);
     EI->BindAction(HackAction,ETriggerEvent::Completed,this,&ASPCharacter::InteractReleased);
     EI->BindAction(HackAction,ETriggerEvent::Canceled,this,&ASPCharacter::InteractReleased);
-    Button(EKeys::LeftMouseButton,&ASPCharacter::AttackPressed);Button(EKeys::F,&ASPCharacter::ServerFlashlight);
+    Mapping->MapKey(HackAction,EKeys::Gamepad_FaceButton_Left);
+    UInputAction* AttackAction=Button(EKeys::LeftMouseButton,&ASPCharacter::AttackPressed);
+    Mapping->MapKey(AttackAction,EKeys::Gamepad_RightTrigger);
+    UInputAction* AimAction=Button(EKeys::RightMouseButton,&ASPCharacter::AimPressed);
+    Mapping->MapKey(AimAction,EKeys::Gamepad_LeftTrigger);
+    EI->BindAction(AimAction,ETriggerEvent::Completed,this,&ASPCharacter::AimReleased);
+    EI->BindAction(AimAction,ETriggerEvent::Canceled,this,&ASPCharacter::AimReleased);
+    Button(EKeys::F,&ASPCharacter::ServerFlashlight);
+    Button(EKeys::Gamepad_FaceButton_Top,&ASPCharacter::EquipmentPressed);
+    Button(EKeys::Gamepad_DPad_Right,&ASPCharacter::PracticeRole);
     Button(EKeys::N,&ASPCharacter::NightVision);Button(EKeys::Tab,&ASPCharacter::PracticeRole);
     if (APlayerController* PC=Cast<APlayerController>(Controller))
         if (UEnhancedInputLocalPlayerSubsystem* Sub=ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
-        {Sub->ClearAllMappings();Sub->AddMappingContext(Mapping,0);}
+        {Sub->AddMappingContext(Mapping,0);}
 }
 void ASPCharacter::Move(const FInputActionValue& Value)
 {
@@ -196,7 +232,24 @@ void ASPCharacter::Move(const FInputActionValue& Value)
     AddMovementInput(R.Vector(),V.Y);AddMovementInput(FRotationMatrix(R).GetUnitAxis(EAxis::Y),V.X);
 }
 void ASPCharacter::Look(const FInputActionValue& Value)
-{const FVector2D V=Value.Get<FVector2D>();AddControllerYawInput(V.X);AddControllerPitchInput(V.Y);}
+{const FVector2D V=Value.Get<FVector2D>();const float Scale=IsAiming()?AimSensitivity:1.f;AddControllerYawInput(V.X*Scale);AddControllerPitchInput(V.Y*Scale);}
+void ASPCharacter::LookGamepad(const FInputActionValue& Value)
+{
+    const FVector2D V=Value.Get<FVector2D>();const float Scale=GetWorld()->GetDeltaSeconds()*(IsAiming()?AimSensitivity:1.f);
+    AddControllerYawInput(V.X*ControllerYawRate*Scale);
+    AddControllerPitchInput(V.Y*ControllerPitchRate*Scale*(bInvertControllerY?1.f:-1.f));
+}
+void ASPCharacter::EquipmentPressed() {if (IsSpy()) NightVision();else ServerFlashlight();}
+void ASPCharacter::AimPressed() {bAiming=!IsSpy() && IsRoundActive();}
+void ASPCharacter::AimReleased() {bAiming=false;}
+float ASPCharacter::GogglePitch() const {return GoggleAngle;}
+float ASPCharacter::CameraDistance() const {return Boom->TargetArmLength;}
+float ASPCharacter::CameraFOV() const {return Camera->FieldOfView;}
+float ASPCharacter::ActualCameraOffset() const {return FVector::Dist(Camera->GetComponentLocation(),GetActorLocation());}
+TArray<FString> ASPCharacter::InputKeys() const
+{
+    TArray<FString> Keys;if (Mapping) for (const auto& Key:Mapping->GetMappings()) Keys.Add(Key.Key.ToString());return Keys;
+}
 void ASPCharacter::JumpPressed() { if (IsRoundActive() && IsSpy()) ServerTraversal(); }
 void ASPCharacter::ServerTraversal_Implementation()
 {
