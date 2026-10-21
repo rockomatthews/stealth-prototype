@@ -69,10 +69,16 @@ ASPCharacter::ASPCharacter(const FObjectInitializer& Init)
     Flashlight=CreateDefaultSubobject<USpotLightComponent>(TEXT("Flashlight"));Flashlight->SetupAttachment(RootComponent);
     Flashlight->SetRelativeLocation(FVector(20,0,50));Flashlight->Intensity=25000;
     Flashlight->AttenuationRadius=1800;Flashlight->OuterConeAngle=30;Flashlight->SetVisibility(false);
+    InspectionLight=CreateDefaultSubobject<USpotLightComponent>(TEXT("PracticeAppearanceLight"));
+    InspectionLight->SetupAttachment(Camera);InspectionLight->SetRelativeLocation(FVector(10,0,0));
+    InspectionLight->Intensity=12000;InspectionLight->AttenuationRadius=800;
+    InspectionLight->OuterConeAngle=60;InspectionLight->SetCastShadows(false);InspectionLight->SetVisibility(false);
 }
 void ASPCharacter::BeginPlay()
 {
     Super::BeginPlay();
+    SpyAppearance=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Meshy/Spy/SK_Spy.SK_Spy"));
+    MercAppearance=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Meshy/Merc/SK_Merc.SK_Merc"));
     if (USkeletalMesh* Mesh=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Prototype/Mannequin/SK_Prototype.SK_Prototype"))) GetMesh()->SetSkeletalMesh(Mesh);
     const TCHAR* Names[]={TEXT("Idle"),TEXT("Walk"),TEXT("CrouchIdle"),TEXT("Crouch"),TEXT("Jump"),TEXT("Fall"),TEXT("Land"),TEXT("Vault")};
     for (const TCHAR* Name:Names)
@@ -108,37 +114,52 @@ void ASPCharacter::ConfigureRole()
 {
     if (!GetPlayerState<ASPPlayerState>()) return;
     bAiming=false;
-    const bool Spy=IsSpy();Boom->TargetArmLength=Spy?SpyCameraDistance:0;
-    Boom->SocketOffset=Spy?FVector(0,40,0):FVector::ZeroVector;
-    bUseControllerRotationYaw=!Spy;GetCharacterMovement()->bOrientRotationToMovement=Spy;
+    const bool Spy=IsSpy();
+    const ASPGameState* GS=GetWorld()->GetGameState<ASPGameState>();
+    if (!GS || !GS->bPractice) bInspectAppearance=false;
+    const bool ThirdPerson=Spy || bInspectAppearance;
+    Boom->TargetArmLength=ThirdPerson?SpyCameraDistance:0;
+    Boom->SocketOffset=ThirdPerson?FVector(0,40,0):FVector::ZeroVector;
+    USkeletalMesh* Appearance=Spy?SpyAppearance.Get():MercAppearance.Get();
+    bUsesMeshyAppearance=Appearance!=nullptr;
+    if (!Appearance) Appearance=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Prototype/Mannequin/SK_Prototype.SK_Prototype"));
+    if (Appearance && GetMesh()->GetSkeletalMeshAsset()!=Appearance)
+    {
+        GetMesh()->SetSkeletalMesh(Appearance);
+        GetMesh()->EmptyOverrideMaterials();
+        PlayingClip=INDEX_NONE;
+    }
+    bUseControllerRotationYaw=!ThirdPerson;GetCharacterMovement()->bOrientRotationToMovement=ThirdPerson;
     GetCharacterMovement()->MaxWalkSpeed=Spy?SpySpeed:MercSpeed;
     // A 1.05 m passage fits only the spy's crouched capsule.
     GetCharacterMovement()->SetCrouchedHalfHeight(Spy?42.f:60.f);
-    GetMesh()->SetOwnerNoSee(!Spy);Body->SetOwnerNoSee(!Spy);Head->SetOwnerNoSee(!Spy);
+    GetMesh()->SetOwnerNoSee(!ThirdPerson);Body->SetOwnerNoSee(!ThirdPerson);Head->SetOwnerNoSee(!ThirdPerson);
     Mask->SetOwnerNoSee(!Spy);Vest->SetOwnerNoSee(!Spy);
     if (UMaterialInterface* M=LoadObject<UMaterialInterface>(nullptr,Spy?TEXT("/Game/Prototype/M_Spy.M_Spy"):TEXT("/Game/Prototype/M_Merc.M_Merc")))
     {
-        for (int32 I=0;I<GetMesh()->GetNumMaterials();++I) GetMesh()->SetMaterial(I,M);
+        if (!bUsesMeshyAppearance) for (int32 I=0;I<GetMesh()->GetNumMaterials();++I) GetMesh()->SetMaterial(I,M);
         Body->SetMaterial(0,M);Head->SetMaterial(0,M);
     }
     if (UMaterialInterface* M=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Prototype/M_Gear.M_Gear")))
     { Mask->SetMaterial(0,M);Vest->SetMaterial(0,M);Gun->SetMaterial(0,M); }
     GoggleLeft->SetOwnerNoSee(!Spy);GoggleRight->SetOwnerNoSee(!Spy);
-    bRoleConfigured=true;
+    bConfiguredSpy=Spy;bRoleConfigured=true;
 }
 void ASPCharacter::Tick(float Delta)
 {
     Super::Tick(Delta);
-    if (!bRoleConfigured || (IsSpy() && Boom->TargetArmLength==0) || (!IsSpy() && Boom->TargetArmLength>0)) ConfigureRole();
+    if (!bRoleConfigured || bConfiguredSpy!=IsSpy()) ConfigureRole();
     const bool HasMesh=GetMesh()->GetSkeletalMeshAsset()!=nullptr;
     Body->SetVisibility(Health>0 && !HasMesh);Head->SetVisibility(Health>0 && !HasMesh);
-    GetMesh()->SetVisibility(Health>0);Mask->SetVisibility(Health>0 && HasMesh);Vest->SetVisibility(Health>0 && HasMesh && !IsSpy());
-    Gun->SetVisibility(Health>0 && !IsSpy());
-    GoggleLeft->SetVisibility(Health>0 && HasMesh && IsSpy());GoggleRight->SetVisibility(Health>0 && HasMesh && IsSpy());
+    GetMesh()->SetVisibility(Health>0);Mask->SetVisibility(Health>0 && HasMesh && !bUsesMeshyAppearance);Vest->SetVisibility(Health>0 && HasMesh && !IsSpy() && !bUsesMeshyAppearance);
+    Gun->SetVisibility(Health>0 && !IsSpy() && !bInspectAppearance);
+    GoggleLeft->SetVisibility(Health>0 && HasMesh && IsSpy() && !bUsesMeshyAppearance);GoggleRight->SetVisibility(Health>0 && HasMesh && IsSpy() && !bUsesMeshyAppearance);
     // Keep the hinge angle scalar: Euler decomposition flips axes beyond 90 degrees.
     GoggleAngle=FMath::FInterpTo(GoggleAngle,bNightVision?0.f:-105.f,Delta,10.f);
     GoggleHinge->SetRelativeRotation(FRotator(GoggleAngle,0,0));
     Flashlight->SetWorldRotation(GetBaseAimRotation());Flashlight->SetVisibility(bFlashlight && !IsSpy() && Health>0);
+    const ASPGameState* PracticeState=GetWorld()->GetGameState<ASPGameState>();
+    InspectionLight->SetVisibility(bInspectAppearance && PracticeState && PracticeState->bPractice && IsLocallyControlled());
     if ((!IsSpy() || Health<=0) && bNightVision) { NightVision(); }
     if (IsLocallyControlled())
     {
@@ -220,6 +241,8 @@ void ASPCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     Button(EKeys::F,&ASPCharacter::ServerFlashlight);
     Button(EKeys::Gamepad_FaceButton_Top,&ASPCharacter::EquipmentPressed);
     Button(EKeys::Gamepad_DPad_Right,&ASPCharacter::PracticeRole);
+    UInputAction* InspectAction=Button(EKeys::V,&ASPCharacter::InspectAppearance);
+    Mapping->MapKey(InspectAction,EKeys::Gamepad_DPad_Up);
     Button(EKeys::N,&ASPCharacter::NightVision);Button(EKeys::Tab,&ASPCharacter::PracticeRole);
     if (APlayerController* PC=Cast<APlayerController>(Controller))
         if (UEnhancedInputLocalPlayerSubsystem* Sub=ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
@@ -240,6 +263,13 @@ void ASPCharacter::LookGamepad(const FInputActionValue& Value)
     AddControllerPitchInput(V.Y*ControllerPitchRate*Scale*(bInvertControllerY?1.f:-1.f));
 }
 void ASPCharacter::EquipmentPressed() {if (IsSpy()) NightVision();else ServerFlashlight();}
+void ASPCharacter::InspectAppearance()
+{
+    const ASPGameState* GS=GetWorld()->GetGameState<ASPGameState>();
+    if (!GS || !GS->bPractice || !IsLocallyControlled()) return;
+    bInspectAppearance=!bInspectAppearance;
+    ConfigureRole();
+}
 void ASPCharacter::AimPressed() {bAiming=!IsSpy() && IsRoundActive();}
 void ASPCharacter::AimReleased() {bAiming=false;}
 float ASPCharacter::GogglePitch() const {return GoggleAngle;}
@@ -342,6 +372,7 @@ void ASPCharacter::Exercise(const FString& Action)
     else if (Action==TEXT("release")) ServerInteract(false);
     else if (Action==TEXT("fire")) ServerAttack();
     else if (Action==TEXT("role")) PracticeRole();
+    else if (Action==TEXT("inspect")) InspectAppearance();
     else if (Action==TEXT("crouch")) CrouchPressed();
     else if (Action==TEXT("nightvision")) NightVision();
 #endif

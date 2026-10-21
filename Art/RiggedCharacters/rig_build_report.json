@@ -1,0 +1,20 @@
+[
+  {
+    "label": "Spy",
+    "triangles": 80000,
+    "vertices": 39722,
+    "bones": 88,
+    "unweighted_before_fill": 0,
+    "max_influences": 4,
+    "fbx": "/Users/rob/Documents/ChatGPT/rocketship.codes/stealth-prototype/Art/RiggedCharacters/Spy_rigged.fbx"
+  },
+  {
+    "label": "Merc",
+    "triangles": 80000,
+    "vertices": 39490,
+    "bones": 88,
+    "unweighted_before_fill": 0,
+    "max_influences": 4,
+    "fbx": "/Users/rob/Documents/ChatGPT/rocketship.codes/stealth-prototype/Art/RiggedCharacters/Merc_rigged.fbx"
+  }
+]

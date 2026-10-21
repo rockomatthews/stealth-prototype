@@ -1,8 +1,6 @@
-# Current checkpoint — October 19, 2026
+# Current checkpoint — October 20, 2026
 
-October 20 update: temporary solo character selection now supports **1 = Spy**, **2 = Merc**, plus Tab/D-pad Right toggling. The editor build succeeds; direct selection and toggling were exercised in live practice, with a 60 cm first-person camera offset for merc and a 289 cm third-person offset for spy. No input isolation was enabled for this handoff. Internet/Host/Join work is deferred while the user tests feel and appearance. Runtime characters remain placeholders.
-
-Xbox controller support is implemented and the Unreal 5.8.3 Development Editor build succeeds on this Mac. **44/44 automated gameplay checks passed**; see [TEST_RESULTS.md](TEST_RESULTS.md). The project is ready for a focused human controller playtest, with temporary art.
+Both original Meshy characters are rigged and optimized to 80,000 triangles each. Solo practice supports **1 = Spy**, **2 = Merc**, **Tab/D-pad Right = switch**, and **V/D-pad Up = appearance view**. The Development Editor build and **50/50 automated checks passed**. See [CHARACTER_PLAYTEST.md](CHARACTER_PLAYTEST.md) and [TEST_RESULTS.md](TEST_RESULTS.md). Internet Host/Join remains deferred while feel and appearance are tested. PIE is stopped and the project is saved for tomorrow.
 
 ## Verified foundation
 
@@ -15,7 +13,7 @@ Xbox controller support is implemented and the Unreal 5.8.3 Development Editor b
 
 ## Current art and Xbox scope
 
-The spy uses binocular flip-up goggles. Current references are `Art/Concepts/spy-v2-flip-up-goggles.png` and `spy-apose-v2-flip-up-goggles.png`. Merc references remain masked and SWAT-like. Runtime meshes, weapon and gear are placeholders; no final custom rigged characters or first-person arms have been made.
+The spy and fully masked SWAT-like merc now use textured prototype rigs. Three modeling reference documents and source images are in `Art/ModelingReferences/2026-10-20`. Goggles and back gear remain baked into the spy body; separate hinged goggles, state-controlled lens emission and drawn launcher animations remain work to do. The merc carbine import is included but not yet equipped. First-person arms and production weight cleanup are unfinished.
 
 Xbox Series X|S is the current console target. Mac testing does not produce an Xbox console build. See [XBOX.md](XBOX.md) for controller controls and the Windows, Xbox developer access and console hardware requirements. No SDK enrollment, purchase, console packaging or certification has occurred.
 
@@ -24,7 +22,7 @@ Xbox Series X|S is the current console target. Mac testing does not produce an X
 1. Connect the Xbox controller and click the solo practice game window. Move either stick to switch the HUD to Xbox hints. Use D-pad Right to compare roles, A at north platforms and low cover, B to drop, and Y for goggles/flashlight.
 2. Judge sensitivity, turning, crouch speed, camera collision, dark-area readability and comfort. Tune ControllerYawRate, ControllerPitchRate, StickDeadZone, bInvertControllerY, AimSensitivity and role speeds in BP_Player defaults.
 3. Still verify physical controller disconnect/reconnect, keyboard-to-pad switching under real hardware, blocked hacking, deliberately invalid/blocked ledges, disconnect/rejoin and prolonged play. Multi-process/multi-machine tests and controlled GPU profiling remain outstanding.
-4. Final character modeling, UVs, textures, skinning, polished animation/first-person arms and a detailed industrial environment follow the movement feel test. Milestones D/E are not fully complete.
+4. Production character deformation cleanup, polished animation/first-person arms, equipment integration and a detailed industrial environment follow the movement feel test. Milestones D/E are not fully complete.
 
 ## Build and automated checks
 

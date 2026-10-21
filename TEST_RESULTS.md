@@ -1,17 +1,17 @@
-# Controller and multiplayer validation — October 19, 2026
+# Character and controller validation — October 20, 2026
 
-44/44 automated checks passed. Unreal 5.8.3, Development Editor build, Apple Silicon Mac. The final run used editor-only input isolation; normal input was restored afterward.
+50/50 automated checks passed on Unreal 5.8.3, Development Editor, Apple Silicon Mac. The final build passed. Ordinary input was restored after test isolation. The end-of-day checkpoint has PIE stopped and editor assets saved.
 
-Synthetic Xbox key events went through PlayerController and Enhanced Input, then normal gameplay RPCs. Four PIE worlds ran in one process: one listen server and three remote clients, 640×360 each. Solo practice uses 960×540. These results do not establish physical-controller compatibility, separate-machine networking or Xbox console performance.
+The spy and merc now use separate 80,000-triangle skeletal meshes, sharing the prototype animation skeleton. Both textured characters were visually inspected standing, and the merc was inspected crouching. Material assignments were read back. Animated head scale and location checks cover the corrected FBX root-scale problem. See [CHARACTER_PLAYTEST.md](CHARACTER_PLAYTEST.md) for controls and remaining art work.
 
-Sampled editor frame intervals across 23 successful four-client observations: median 29.7 ms, range 20.3–343.7 ms. This is a functional-run sample, not a controlled GPU benchmark.
-
-Actual spy camera displacement, merc first-person offset and HUD draw activity were checked on every local client. Spy third person, night vision, merc first person, flashlight and controller hints were also inspected visually in the running Mac editor. Art and weapon meshes remain placeholders.
+Synthetic Xbox events went through Enhanced Input and normal gameplay RPCs. Four PIE worlds ran in one process: one listen server and three remote clients. This does not establish physical-controller compatibility, separate-machine internet play or Xbox console performance. Internet Host/Join remains deferred.
 
 | Check | Result |
 | --- | --- |
 | project identity | PASS |
 | solo practice and skeletal character | PASS |
+| practice uses the rigged spy appearance | PASS |
+| animated spy keeps human scale | PASS |
 | spy camera is actually third person and HUD draws | PASS |
 | controller bindings installed | PASS |
 | stick dead zone prevents drift | PASS |
@@ -21,6 +21,10 @@ Actual spy camera displacement, merc first-person offset and HUD draw activity w
 | controller Y raises spy goggles | PASS |
 | controller B crouches | PASS |
 | controller practice role and first-person camera | PASS |
+| practice uses the rigged merc appearance | PASS |
+| animated merc keeps human scale | PASS |
+| controller appearance view shows merc in third person | PASS |
+| controller appearance view returns to first person | PASS |
 | controller LT aims merc | PASS |
 | releasing LT restores camera | PASS |
 | controller Y toggles merc flashlight | PASS |
@@ -55,4 +59,6 @@ Actual spy camera displacement, merc first-person offset and HUD draw activity w
 | round resets | PASS |
 | spy hack victory replicates | PASS |
 
-The latency run verified 100 ms packet lag and 2% loss in every PIE net driver. At the end of the remote climb, client positions agreed with the server within 25 cm. This does not prove absence of transient corrections. Full raw observations remain local in Saved/acceptance.json.
+Traversal includes simulated 100 ms lag and 2% packet loss. Final remote climb positions agree within 25 cm; this does not establish absence of transient corrections. Raw observations, build logs and final material/pose readback remain local under Saved/.
+
+Goggles and back equipment are still part of the skinned spy body; independent goggle hinges, state-controlled lens emission and drawn launcher animations remain unfinished. Prototype weight cleanup, first-person arms, physical controller testing and prolonged playtesting remain outstanding.

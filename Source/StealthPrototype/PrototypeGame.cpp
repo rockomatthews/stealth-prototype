@@ -205,11 +205,11 @@ void ASPHUD::DrawHUD()
     auto Text=[this,Scale](const FString& Value,FLinearColor Color,float X,float Y)
     {DrawText(Value,Color,X*Scale,Y*Scale,nullptr,Scale);};
     DrawRect(FLinearColor(0,0,0,.7f),16*Scale,16*Scale,760*Scale,145*Scale);
-    Text(Pawn->IsSpy() ? TEXT("SPY | THIRD PERSON") : TEXT("MERC | FIRST PERSON"), Accent, 28,26);
+    Text(Pawn->IsSpy() ? TEXT("SPY | THIRD PERSON") : (Pawn->IsInspectingAppearance()?TEXT("MERC | APPEARANCE VIEW"):TEXT("MERC | FIRST PERSON")), Accent, 28,26);
     FString Status;
     const ASPPlayerController* PC=Cast<ASPPlayerController>(PlayerOwner);
     const bool Pad=PC && PC->UsingGamepad();
-    if (GS->bPractice) Status = Pad?TEXT("PRACTICE | D-pad Right changes character | Temporary test control"):TEXT("PRACTICE | 1 Spy / 2 Merc / Tab switch | Temporary test controls");
+    if (GS->bPractice) Status = Pad?TEXT("PRACTICE | D-pad Right switch | D-pad Up appearance view"):TEXT("PRACTICE | 1 Spy / 2 Merc / Tab switch | V appearance view");
     else if (GS->Phase == ESPPhase::Waiting)
         Status = FString::Printf(TEXT("Waiting for 4 players | Spies %d/2 | Mercs %d/2"), GS->Spies, GS->Mercs);
     else if (GS->Phase == ESPPhase::SpiesWin) Status = TEXT("SPIES WIN | Restarting in 8 seconds");
@@ -240,7 +240,7 @@ void ASPPlayerController::ClientExercise_Implementation(const FString& Action)
     const TMap<FString,FKey> PadKeys={{TEXT("a"),EKeys::Gamepad_FaceButton_Bottom},{TEXT("b"),EKeys::Gamepad_FaceButton_Right},
         {TEXT("x"),EKeys::Gamepad_FaceButton_Left},{TEXT("y"),EKeys::Gamepad_FaceButton_Top},
         {TEXT("rt"),EKeys::Gamepad_RightTrigger},{TEXT("lt"),EKeys::Gamepad_LeftTrigger},
-        {TEXT("role"),EKeys::Gamepad_DPad_Right},{TEXT("move"),EKeys::Gamepad_LeftY},{TEXT("drift"),EKeys::Gamepad_LeftY},{TEXT("look"),EKeys::Gamepad_RightX}};
+        {TEXT("role"),EKeys::Gamepad_DPad_Right},{TEXT("inspect"),EKeys::Gamepad_DPad_Up},{TEXT("move"),EKeys::Gamepad_LeftY},{TEXT("drift"),EKeys::Gamepad_LeftY},{TEXT("look"),EKeys::Gamepad_RightX}};
     if (Action.StartsWith(TEXT("pad_")))
     {
         FString Button=Action.Mid(4);const bool Released=Button.RemoveFromEnd(TEXT("_up"));

@@ -85,6 +85,8 @@ public:
     float CameraDistance() const;
     float CameraFOV() const;
     float ActualCameraOffset() const;
+    bool IsInspectingAppearance() const { return bInspectAppearance; }
+    UFUNCTION(BlueprintCallable) void InspectAppearance();
     TArray<FString> InputKeys() const;
     UFUNCTION(BlueprintCallable) void PracticeRole();
     UFUNCTION(BlueprintCallable) void ChoosePracticeRole(ESPTeam SelectedTeam);
@@ -102,9 +104,12 @@ protected:
     UPROPERTY(VisibleAnywhere) UStaticMeshComponent* Body;
     UPROPERTY(VisibleAnywhere) UStaticMeshComponent* Head;
     UPROPERTY(VisibleAnywhere) USpotLightComponent* Flashlight;
+    UPROPERTY(VisibleAnywhere) USpotLightComponent* InspectionLight;
     UPROPERTY(Transient) UInputMappingContext* Mapping;
     UPROPERTY(Transient) TArray<TObjectPtr<UInputAction>> Actions;
     UPROPERTY(Transient) TArray<TObjectPtr<UAnimSequence>> Clips;
+    UPROPERTY(Transient) TObjectPtr<USkeletalMesh> SpyAppearance;
+    UPROPERTY(Transient) TObjectPtr<USkeletalMesh> MercAppearance;
     UPROPERTY(Transient) USoundBase* StepSound;
     UPROPERTY(Transient) USoundBase* ShotSound;
     UPROPERTY(VisibleAnywhere) UStaticMeshComponent* Mask;
@@ -140,6 +145,9 @@ protected:
     void AttackPressed();
     bool bInteractHeld = false;
     bool bRoleConfigured = false;
+    bool bConfiguredSpy = false;
+    bool bUsesMeshyAppearance = false;
+    bool bInspectAppearance = false;
     bool bAiming = false;
     float GoggleAngle = -105.f;
     double LastAttackTime = -10.0;
