@@ -1,5 +1,7 @@
 # Current checkpoint — October 19, 2026
 
+October 20 update: temporary solo character selection now supports **1 = Spy**, **2 = Merc**, plus Tab/D-pad Right toggling. The editor build succeeds; direct selection and toggling were exercised in live practice, with a 60 cm first-person camera offset for merc and a 289 cm third-person offset for spy. No input isolation was enabled for this handoff. Internet/Host/Join work is deferred while the user tests feel and appearance. Runtime characters remain placeholders.
+
 Xbox controller support is implemented and the Unreal 5.8.3 Development Editor build succeeds on this Mac. **44/44 automated gameplay checks passed**; see [TEST_RESULTS.md](TEST_RESULTS.md). The project is ready for a focused human controller playtest, with temporary art.
 
 ## Verified foundation

@@ -39,6 +39,9 @@ The first four players are assigned alternately Spy, Merc, Spy, Merc. The timer 
 | F | — | Toggle flashlight |
 | N | Lower binocular goggles and enable night vision / raise and disable | — |
 | Tab | Switch role in solo practice only | Switch role in solo practice only |
+| 1 / 2 | Select Spy / Merc directly in solo practice | Select Spy / Merc directly in solo practice |
+
+Character switching is a temporary local playtest control. D-pad Right also toggles the practice character. These controls do not change teams during competitive matches.
 
 Spies need 20 cumulative seconds of hacking. Two spies do not accelerate the hack. Released progress persists. Mercs win if the 180-second timer expires; a completed hack takes priority on the same tick. Merc shots do 34 damage; spies can do 100 damage from behind. Friendly fire is ignored. Dead players respawn after 5 seconds. Results display for 8 seconds, then the round resets. The server checks attack cadence, role, trace, target and takedown angle; the server also checks hack distance and visibility. This is prototype validation, not production cheat prevention.
 

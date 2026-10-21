@@ -116,7 +116,7 @@ FString USPDiagnostics::Exercise(int32 Index,const FString& Action)
             return TEXT("Network emulation unavailable in this build");
 #endif
         }
-        const TArray<FString> Allowed={TEXT("traverse"),TEXT("drop"),TEXT("hack"),TEXT("release"),TEXT("fire"),TEXT("role"),TEXT("crouch"),TEXT("nightvision")};
+        const TArray<FString> Allowed={TEXT("traverse"),TEXT("drop"),TEXT("hack"),TEXT("release"),TEXT("fire"),TEXT("role"),TEXT("spy"),TEXT("merc"),TEXT("crouch"),TEXT("nightvision")};
         if (!Allowed.Contains(Action) && !Action.StartsWith(TEXT("pad_"))) return TEXT("Unknown test action");
         // Native MCP executes in editor context. Dispatch RPCs during the game world's
         // tick so PIE chooses the owning client's network callspace correctly.

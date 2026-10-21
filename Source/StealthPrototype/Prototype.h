@@ -87,6 +87,7 @@ public:
     float ActualCameraOffset() const;
     TArray<FString> InputKeys() const;
     UFUNCTION(BlueprintCallable) void PracticeRole();
+    UFUNCTION(BlueprintCallable) void ChoosePracticeRole(ESPTeam SelectedTeam);
     UFUNCTION(Server, Reliable, BlueprintCallable) void ServerTraversal();
     UFUNCTION(Server, Reliable, BlueprintCallable) void ServerDrop();
     UFUNCTION(Client, Reliable) void ClientFeedback(const FString& Text);
@@ -171,6 +172,8 @@ public:
     UFUNCTION(Client,Reliable) void ClientExercise(const FString& Action);
     UFUNCTION(Exec) void Practice();
     UFUNCTION(Exec) void Match();
+    UFUNCTION(Exec) void PracticeSpy();
+    UFUNCTION(Exec) void PracticeMerc();
 private:
     bool bUsingGamepad = false;
 #if WITH_EDITOR

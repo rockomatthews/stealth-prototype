@@ -266,15 +266,18 @@ void ASPCharacter::CrouchPressed()
 }
 void ASPCharacter::PracticeRole()
 {
-#if !UE_BUILD_SHIPPING
+    ChoosePracticeRole(IsSpy()?ESPTeam::Merc:ESPTeam::Spy);
+}
+void ASPCharacter::ChoosePracticeRole(ESPTeam SelectedTeam)
+{
     ASPGameState* GS=GetWorld()->GetGameState<ASPGameState>();
-    if (HasAuthority() && GS && GS->bPractice)
+    if (HasAuthority() && GetNetMode()==NM_Standalone && GS && GS->bPractice)
     {
         Traversal()->Drop();UnCrouch();
-        if (ASPPlayerState* PS=GetPlayerState<ASPPlayerState>()) {PS->Team=IsSpy()?ESPTeam::Merc:ESPTeam::Spy;PS->ForceNetUpdate();}
-        bNightVision=false;ConfigureRole();ClientFeedback(IsSpy()?TEXT("Practice: spy"):TEXT("Practice: merc"));
+        if (ASPPlayerState* PS=GetPlayerState<ASPPlayerState>()) {PS->Team=SelectedTeam;PS->ForceNetUpdate();}
+        bInteractHeld=false;bNightVision=false;bFlashlight=false;ConfigureRole();
+        ClientFeedback(IsSpy()?TEXT("Practice character: spy"):TEXT("Practice character: merc"));
     }
-#endif
 }
 void ASPCharacter::NightVision()
 {

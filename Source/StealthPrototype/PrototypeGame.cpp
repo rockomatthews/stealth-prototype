@@ -14,6 +14,8 @@ bool ASPPlayerController::InputKey(const FInputKeyEventArgs& Params)
 #if WITH_EDITOR
     if (bAutomatedInput && !Params.IsSimulatedInput()) return true;
 #endif
+    if (Params.Event==IE_Pressed && Params.Key==EKeys::One) {bUsingGamepad=false;PracticeSpy();return true;}
+    if (Params.Event==IE_Pressed && Params.Key==EKeys::Two) {bUsingGamepad=false;PracticeMerc();return true;}
     if (Params.Event!=IE_Released && FMath::Abs(Params.AmountDepressed)>.2f)
         bUsingGamepad=Params.Key.IsGamepadKey();
     return Super::InputKey(Params);
@@ -79,6 +81,8 @@ void ASPPlayerController::Match()
     if (GetNetMode()==NM_Standalone) UGameplayStatics::OpenLevel(this,TEXT("/Game/Maps/Prototype"),true,TEXT("Competitive=1"));
 #endif
 }
+void ASPPlayerController::PracticeSpy() {if (ASPCharacter* P=Cast<ASPCharacter>(GetPawn())) P->ChoosePracticeRole(ESPTeam::Spy);}
+void ASPPlayerController::PracticeMerc() {if (ASPCharacter* P=Cast<ASPCharacter>(GetPawn())) P->ChoosePracticeRole(ESPTeam::Merc);}
 void ASPGameMode::PreLogin(const FString& Options, const FString& Address,
     const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 {
@@ -205,7 +209,7 @@ void ASPHUD::DrawHUD()
     FString Status;
     const ASPPlayerController* PC=Cast<ASPPlayerController>(PlayerOwner);
     const bool Pad=PC && PC->UsingGamepad();
-    if (GS->bPractice) Status = Pad?TEXT("SOLO PRACTICE | D-pad Right swaps role | Scores disabled"):TEXT("SOLO PRACTICE | Tab swaps role | Scores disabled");
+    if (GS->bPractice) Status = Pad?TEXT("PRACTICE | D-pad Right changes character | Temporary test control"):TEXT("PRACTICE | 1 Spy / 2 Merc / Tab switch | Temporary test controls");
     else if (GS->Phase == ESPPhase::Waiting)
         Status = FString::Printf(TEXT("Waiting for 4 players | Spies %d/2 | Mercs %d/2"), GS->Spies, GS->Mercs);
     else if (GS->Phase == ESPPhase::SpiesWin) Status = TEXT("SPIES WIN | Restarting in 8 seconds");
@@ -229,6 +233,8 @@ void ASPHUD::DrawHUD()
 void ASPPlayerController::ClientExercise_Implementation(const FString& Action)
 {
 #if WITH_EDITOR
+    if (Action==TEXT("spy")) {PracticeSpy();return;}
+    if (Action==TEXT("merc")) {PracticeMerc();return;}
     if (Action==TEXT("automation_on") || Action==TEXT("automation_off"))
     {bAutomatedInput=Action==TEXT("automation_on");if (PlayerInput) PlayerInput->FlushPressedKeys();return;}
     const TMap<FString,FKey> PadKeys={{TEXT("a"),EKeys::Gamepad_FaceButton_Bottom},{TEXT("b"),EKeys::Gamepad_FaceButton_Right},
