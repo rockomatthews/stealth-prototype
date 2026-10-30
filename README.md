@@ -2,7 +2,7 @@
 
 Status: **development prototype built against Unreal 5.8.3 on this Mac**. Native editor MCP is connected locally. Automated gameplay observations are recorded in `Saved/acceptance.json`; see `VALIDATION.md` for verified coverage and remaining checks. Character meshes are temporary mannequins with proxy gear, not finished character art.
 
-The intended console target is Xbox Series X|S. Xbox controller input is implemented for both roles, including sticks, A/B traversal/crouch, X hacking, triggers for attack/aim and Y equipment. See [XBOX.md](XBOX.md) for controls, Mac playtesting and the later console build requirements.
+The intended console target is Xbox Series X|S. Xbox controller input is implemented for both roles, including sticks, A/B traversal/crouch, X hacking, triggers for attack/aim Y weapon switching and D-pad Up equipment. See [XBOX.md](XBOX.md) for controls, Mac playtesting and the later console build requirements.
 
 ## Character concepts first
 
@@ -12,7 +12,7 @@ The intended console target is Xbox Series X|S. Xbox controller input is impleme
 - Halo influence means clean, readable high-quality game rendering and material shapes. Equipment remains present-day. These are concept images, **not 3D models, animations, or screenshots**.
 - Built-in imagegen produced two separate character sheets. Prompt specifications are in `Art/Concepts/prompts.md`.
 
-The playable characters use a mannequin-compatible skeletal mesh and eight temporary movement clips. The merc has a masked head, plate-carrier proxy, and an owner-visible weapon proxy; the spy has a two-optic animated goggle proxy. Final mesh modeling, UVs, textures, skinning, first-person arms and polished animation remain future work.
+The playable Meshy spy and merc use mannequin-compatible rigs and temporary movement clips. The spy has independently hinged binocular goggles with two switched lights and an equipped shoulder launcher. The merc has a skeletal carbine, first-person arms and ordinary jumping without ledge traversal. Authored upper-body equipment poses blend over locomotion. See [CHARACTER_PLAYTEST.md](CHARACTER_PLAYTEST.md) for the current controls and prototype limitations.
 
 ## Set up on this Mac
 
@@ -41,7 +41,7 @@ The first four players are assigned alternately Spy, Merc, Spy, Merc. The timer 
 | Tab | Switch role in solo practice only | Switch role in solo practice only |
 | 1 / 2 | Select Spy / Merc directly in solo practice | Select Spy / Merc directly in solo practice |
 
-Character switching is a temporary local playtest control. D-pad Right also toggles the practice character. These controls do not change teams during competitive matches.
+Q / Y toggles hands and the spy shocker; G / RB fires the selected spy gadget; V / D-pad Left toggles appearance view. D-pad Up controls night vision / flashlight. C / LB enters or leaves the spy’s deployed sticky camera. Character switching is a temporary local playtest control. D-pad Right also toggles the practice character. These controls do not change teams during competitive matches.
 
 Spies need 20 cumulative seconds of hacking. Two spies do not accelerate the hack. Released progress persists. Mercs win if the 180-second timer expires; a completed hack takes priority on the same tick. Merc shots do 34 damage; spies can do 100 damage from behind. Friendly fire is ignored. Dead players respawn after 5 seconds. Results display for 8 seconds, then the round resets. The server checks attack cadence, role, trace, target and takedown angle; the server also checks hack distance and visibility. This is prototype validation, not production cheat prevention.
 

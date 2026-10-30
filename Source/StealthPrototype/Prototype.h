@@ -19,12 +19,30 @@ class UInputAction;
 class UInputMappingContext;
 class UAnimSequence;
 class USoundBase;
+class USkeletalMeshComponent;
+class UMaterialInstanceDynamic;
+class ASPStickyCamera;
 struct FInputActionValue;
 
 UENUM(BlueprintType)
 enum class ESPTeam : uint8 { Spy, Merc };
 UENUM(BlueprintType)
 enum class ESPPhase : uint8 { Waiting, Playing, SpiesWin, MercsWin };
+
+UENUM(BlueprintType)
+enum class ESPWeapon : uint8 { Hands=0, Taser=1, Carbine=3 };
+
+UENUM(BlueprintType)
+enum class ESPSpyGadget : uint8 { StickyCamera };
+
+USTRUCT()
+struct FSPWeaponState
+{
+    GENERATED_BODY()
+    UPROPERTY() ESPWeapon Mode=ESPWeapon::Hands;
+    UPROPERTY() float ChangedAt=-10.f;
+    UPROPERTY() uint16 Revision=0;
+};
 
 UCLASS()
 class STEALTHPROTOTYPE_API ASPPlayerState : public APlayerState
@@ -79,7 +97,23 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Controller") float ControllerPitchRate = 110.f;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Controller") bool bInvertControllerY = false;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Controller") float AimSensitivity = .45f;
-    bool IsAiming() const { return bAiming && !IsSpy() && Health>0; }
+    bool IsAiming() const { return bAiming && WeaponReady() && Health>0; }
+    ESPWeapon WeaponMode() const { return WeaponState.Mode; }
+    bool WeaponReady() const;
+    bool HasReticle() const;
+    bool IsStunned() const;
+    float ServerNow() const;
+    float EquipmentAlpha() const { return EquipAlpha; }
+    FString EquipmentReport() const;
+    UFUNCTION(BlueprintCallable) void SwitchWeapon();
+    UFUNCTION(BlueprintCallable) void ViewStickyCamera();
+    UPROPERTY(EditDefaultsOnly, Category="Equipment") float EquipDuration=.7f;
+    UPROPERTY(EditDefaultsOnly, Category="Equipment") float TaserRange=1200.f;
+    UPROPERTY(EditDefaultsOnly, Category="Equipment") float StunDuration=3.f;
+    UPROPERTY(Replicated) float StunnedUntil=0.f;
+    UPROPERTY(Replicated) TObjectPtr<ASPStickyCamera> DeployedCamera;
+    // Gadget selection is independent of drawing/holstering the shocker.
+    UPROPERTY(Replicated, BlueprintReadOnly) ESPSpyGadget SelectedGadget=ESPSpyGadget::StickyCamera;
     bool FlashlightEnabled() const { return bFlashlight; }
     float GogglePitch() const;
     float CameraDistance() const;
@@ -115,14 +149,40 @@ protected:
     UPROPERTY(VisibleAnywhere) UStaticMeshComponent* Mask;
     UPROPERTY(VisibleAnywhere) UStaticMeshComponent* Vest;
     UPROPERTY(VisibleAnywhere) UStaticMeshComponent* Gun;
+    UPROPERTY(VisibleAnywhere) USkeletalMeshComponent* HeldWeapon;
+    UPROPERTY(VisibleAnywhere) USkeletalMeshComponent* FirstPersonWeapon;
+    UPROPERTY(VisibleAnywhere) USkeletalMeshComponent* FirstPersonArms;
+    UPROPERTY(VisibleAnywhere) UStaticMeshComponent* GoggleAssembly;
     UPROPERTY(VisibleAnywhere) USceneComponent* GoggleHinge;
     UPROPERTY(VisibleAnywhere) UStaticMeshComponent* GoggleLeft;
     UPROPERTY(VisibleAnywhere) UStaticMeshComponent* GoggleRight;
+    UPROPERTY(ReplicatedUsing=OnRep_Weapon) FSPWeaponState WeaponState;
+    UFUNCTION() void OnRep_Weapon();
+    UFUNCTION(Server,Reliable) void ServerSwitchWeapon();
+    UFUNCTION(NetMulticast,Unreliable) void MulticastWeaponFire();
+    void SetWeapon(ESPWeapon Mode);
+    void UpdateEquipment(float Delta);
+    void ResetCameraView();
+    UPROPERTY(Transient) TObjectPtr<USkeletalMesh> CarbineAsset;
+    UPROPERTY(Transient) TObjectPtr<USkeletalMesh> LauncherAsset;
+    UPROPERTY(Transient) TObjectPtr<UAnimSequence> CarbineFire;
+    UPROPERTY(Transient) TObjectPtr<UAnimSequence> LauncherFire;
+    UPROPERTY(Transient) TObjectPtr<UAnimSequence> SpyEquip;
+    UPROPERTY(Transient) TObjectPtr<UAnimSequence> MercEquip;
+    UPROPERTY(Transient) TObjectPtr<UMaterialInstanceDynamic> LensMaterial;
+    float EquipAlpha=0.f;
+    float Recoil=0.f;
+    bool bCameraView=false;
+    FTransform HeadReference;
+    FTransform SpineReference;
     UFUNCTION(Server,Reliable) void ServerNightVision(bool Enabled);
     UPROPERTY(ReplicatedUsing=OnRep_Flashlight) bool bFlashlight = false;
     UFUNCTION() void OnRep_Flashlight();
     UFUNCTION(Server, Reliable) void ServerInteract(bool bHeld);
     UFUNCTION(Server, Reliable) void ServerAttack();
+    UFUNCTION(Server, Reliable) void ServerUseGadget();
+    void FireEquippedWeapon(bool bGadgetShot);
+    void GadgetPressed();
     UFUNCTION(Server, Reliable) void ServerFlashlight();
     void Move(const FInputActionValue& Value);
     void Look(const FInputActionValue& Value);
@@ -219,4 +279,14 @@ class STEALTHPROTOTYPE_API ASPHUD : public AHUD
 public:
     float LastDrawTime = -1.f;
     virtual void DrawHUD() override;
+};
+
+UCLASS()
+class STEALTHPROTOTYPE_API ASPStickyCamera : public AActor
+{
+    GENERATED_BODY()
+public:
+    ASPStickyCamera();
+    UPROPERTY(VisibleAnywhere) UCameraComponent* Camera;
+    UPROPERTY(VisibleAnywhere) UStaticMeshComponent* Housing;
 };

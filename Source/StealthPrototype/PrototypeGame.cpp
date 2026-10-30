@@ -209,7 +209,7 @@ void ASPHUD::DrawHUD()
     FString Status;
     const ASPPlayerController* PC=Cast<ASPPlayerController>(PlayerOwner);
     const bool Pad=PC && PC->UsingGamepad();
-    if (GS->bPractice) Status = Pad?TEXT("PRACTICE | D-pad Right switch | D-pad Up appearance view"):TEXT("PRACTICE | 1 Spy / 2 Merc / Tab switch | V appearance view");
+    if (GS->bPractice) Status = Pad?TEXT("PRACTICE | D-pad Right switch | D-pad Left appearance view"):TEXT("PRACTICE | 1 Spy / 2 Merc / Tab switch | V appearance view");
     else if (GS->Phase == ESPPhase::Waiting)
         Status = FString::Printf(TEXT("Waiting for 4 players | Spies %d/2 | Mercs %d/2"), GS->Spies, GS->Mercs);
     else if (GS->Phase == ESPPhase::SpiesWin) Status = TEXT("SPIES WIN | Restarting in 8 seconds");
@@ -218,16 +218,21 @@ void ASPHUD::DrawHUD()
         FMath::CeilToInt(GS->RoundSeconds)/60, FMath::CeilToInt(GS->RoundSeconds)%60,
         FMath::RoundToInt(GS->HackProgress*100), FMath::RoundToInt(Pawn->Health));
     Text(Status, White,28,52);
-    Text(Pad?TEXT("LS move | RS look | B crouch / drop | A jump / vault / climb"):TEXT("WASD move | Mouse look | Ctrl crouch | Space jump / vault / climb"), White,28,78);
-    Text(Pawn->IsSpy() ? (Pad?TEXT("Hold X hack | RT rear takedown | Y goggles up / down"):TEXT("E hack | Click rear takedown | N goggles up / down | Ctrl drop"))
-        : (Pad?TEXT("RT shoot | Hold LT aim | Y flashlight | Defend terminal"):TEXT("Click shoot | Hold right mouse aim | F flashlight")), White,28,104);
-    Text(TEXT("PROTOTYPE | Original game, placeholder character art"), White,28,130);
+    Text(Pad?TEXT("LS move | RS look | B crouch / drop | A jump (spy: vault / climb)"):TEXT("WASD move | Mouse look | Ctrl crouch | Space jump / vault / climb"), White,28,78);
+    Text(Pawn->IsSpy() ? (Pad?TEXT("X hack | Y hands / taser | RT shock | RB gadget | Up goggles | LB view"):TEXT("E hack | Q hands / taser | G gadget | N goggles | C camera view"))
+        : (Pad?TEXT("RT shoot | LT aim | Y weapon | Up flashlight"):TEXT("Click shoot | Right mouse aim | Q weapon | F flashlight")), White,28,104);
+    Text(TEXT("PROTOTYPE | Original characters and equipment"), White,28,130);
     if (Pawn->FeedbackUntil > GetWorld()->GetTimeSeconds()) Text(Pawn->Feedback,Accent,28,180);
     if (Pawn->Traversal()->Motion.State == ESPTraversal::Hanging) Text(Pad?TEXT("HANGING | A climb | B drop"):TEXT("HANGING | Space climb | Ctrl drop"),Accent,28,205);
     if (Pawn->NightVisionEnabled()) Text(TEXT("NIGHT VISION"),Accent,28,230);
     if (Pawn->Health <= 0.f) Text(TEXT("DOWN | Respawn after 5 seconds"), Accent,28,180);
+    if (Pawn->HasReticle())
+    {
     DrawLine(Canvas->ClipX/2-6,Canvas->ClipY/2,Canvas->ClipX/2+6,Canvas->ClipY/2,Accent);
     DrawLine(Canvas->ClipX/2,Canvas->ClipY/2-6,Canvas->ClipX/2,Canvas->ClipY/2+6,Accent);
+    }
+    if (Pawn->IsSpy() && Pawn->WeaponMode()!=ESPWeapon::Hands) Text(Pad?TEXT("RT TASER | RB STICKY CAMERA"):TEXT("CLICK TASER | G STICKY CAMERA"),Accent,28,255);
+    if (Pawn->IsStunned()) Text(TEXT("STUNNED"),Accent,28,280);
 }
 
 void ASPPlayerController::ClientExercise_Implementation(const FString& Action)
@@ -240,7 +245,7 @@ void ASPPlayerController::ClientExercise_Implementation(const FString& Action)
     const TMap<FString,FKey> PadKeys={{TEXT("a"),EKeys::Gamepad_FaceButton_Bottom},{TEXT("b"),EKeys::Gamepad_FaceButton_Right},
         {TEXT("x"),EKeys::Gamepad_FaceButton_Left},{TEXT("y"),EKeys::Gamepad_FaceButton_Top},
         {TEXT("rt"),EKeys::Gamepad_RightTrigger},{TEXT("lt"),EKeys::Gamepad_LeftTrigger},
-        {TEXT("role"),EKeys::Gamepad_DPad_Right},{TEXT("inspect"),EKeys::Gamepad_DPad_Up},{TEXT("move"),EKeys::Gamepad_LeftY},{TEXT("drift"),EKeys::Gamepad_LeftY},{TEXT("look"),EKeys::Gamepad_RightX}};
+        {TEXT("role"),EKeys::Gamepad_DPad_Right},{TEXT("equipment"),EKeys::Gamepad_DPad_Up},{TEXT("inspect"),EKeys::Gamepad_DPad_Left},{TEXT("camera"),EKeys::Gamepad_LeftShoulder},{TEXT("gadget"),EKeys::Gamepad_RightShoulder},{TEXT("move"),EKeys::Gamepad_LeftY},{TEXT("drift"),EKeys::Gamepad_LeftY},{TEXT("look"),EKeys::Gamepad_RightX}};
     if (Action.StartsWith(TEXT("pad_")))
     {
         FString Button=Action.Mid(4);const bool Released=Button.RemoveFromEnd(TEXT("_up"));

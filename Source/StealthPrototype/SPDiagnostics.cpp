@@ -8,6 +8,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Animation/AnimSingleNodeInstance.h"
+#include "SPEquipmentAnimInstance.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
@@ -40,11 +41,16 @@ FString USPDiagnostics::RuntimeReport()
             P->SetBoolField(TEXT("mesh"),It->GetMesh()->GetSkeletalMeshAsset()!=nullptr);P->SetBoolField(TEXT("crouched"),It->bIsCrouched);
             P->SetStringField(TEXT("meshPath"),GetPathNameSafe(It->GetMesh()->GetSkeletalMeshAsset()));
             P->SetBoolField(TEXT("appearanceView"),It->IsInspectingAppearance());
+            TSharedPtr<FJsonObject> Equipment;
+            auto Reader=TJsonReaderFactory<>::Create(It->EquipmentReport());
+            if (FJsonSerializer::Deserialize(Reader,Equipment)) P->SetObjectField(TEXT("equipment"),Equipment);
             const FTransform HeadPose=It->GetMesh()->GetSocketTransform(TEXT("head"));
             P->SetNumberField(TEXT("headBoneScale"),HeadPose.GetScale3D().GetMax());
             P->SetNumberField(TEXT("headDistance"),FVector::Dist(HeadPose.GetLocation(),It->GetActorLocation()));
             if (const UAnimSingleNodeInstance* Anim=It->GetMesh()->GetSingleNodeInstance())
                 P->SetNumberField(TEXT("animationTime"),Anim->GetCurrentTime());
+            if (const USPEquipmentAnimInstance* Anim=Cast<USPEquipmentAnimInstance>(It->GetMesh()->GetAnimInstance()))
+                P->SetNumberField(TEXT("animationTime"),Anim->LocomotionTime());
             P->SetBoolField(TEXT("nightvision"),It->NightVisionEnabled());Pawns.Add(MakeShared<FJsonValueObject>(P));
             P->SetBoolField(TEXT("flashlight"),It->FlashlightEnabled());P->SetBoolField(TEXT("aiming"),It->IsAiming());
             P->SetNumberField(TEXT("gogglePitch"),It->GogglePitch());P->SetNumberField(TEXT("cameraDistance"),It->CameraDistance());

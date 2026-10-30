@@ -60,3 +60,12 @@ class StealthProjectTools(unreal.ToolsetDefinition):
         script=Path(unreal.Paths.project_dir())/'Scripts'/'bootstrap_editor.py'
         exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__'})
         return 'Project asset bootstrap completed'
+
+    @toolset_registry.tool_call
+    @staticmethod
+    def import_equipment() -> str:
+        """Import the fixed project equipment build and validate its saved assets."""
+        if unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world() is not None: raise RuntimeError('Stop PIE before importing')
+        script=Path(unreal.Paths.project_dir())/'Scripts'/'import_equipment.py'
+        exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__'})
+        return 'Equipment imported and saved'

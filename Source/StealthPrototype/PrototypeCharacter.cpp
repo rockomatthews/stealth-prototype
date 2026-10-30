@@ -1,4 +1,6 @@
 #include "Prototype.h"
+#include "SPEquipmentAnimInstance.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SpotLightComponent.h"
@@ -48,6 +50,8 @@ ASPCharacter::ASPCharacter(const FObjectInitializer& Init)
     Body->SetStaticMesh(Cylinder.Object);Head->SetStaticMesh(Sphere.Object);
     GetMesh()->SetRelativeLocation(FVector(0,0,-88));GetMesh()->SetRelativeRotation(FRotator(0,-90,0));
     GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    // The merc body is hidden from its owner, but still drives hands and server muzzle traces.
+    GetMesh()->VisibilityBasedAnimTickOption=EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
     GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
     static ConstructorHelpers::FObjectFinder<USkeletalMesh> Mannequin(TEXT("/Game/Prototype/Mannequin/SK_Prototype.SK_Prototype"));
     if (Mannequin.Succeeded()) GetMesh()->SetSkeletalMesh(Mannequin.Object);
@@ -69,6 +73,18 @@ ASPCharacter::ASPCharacter(const FObjectInitializer& Init)
     Flashlight=CreateDefaultSubobject<USpotLightComponent>(TEXT("Flashlight"));Flashlight->SetupAttachment(RootComponent);
     Flashlight->SetRelativeLocation(FVector(20,0,50));Flashlight->Intensity=25000;
     Flashlight->AttenuationRadius=1800;Flashlight->OuterConeAngle=30;Flashlight->SetVisibility(false);
+    HeldWeapon=CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("EquippedWeapon"));
+    HeldWeapon->SetupAttachment(GetMesh());HeldWeapon->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    HeldWeapon->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    FirstPersonWeapon=CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPersonWeapon"));
+    FirstPersonWeapon->SetupAttachment(Camera);FirstPersonWeapon->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    FirstPersonWeapon->SetOnlyOwnerSee(true);FirstPersonWeapon->SetCastShadow(false);
+    FirstPersonWeapon->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+    FirstPersonArms=CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPersonArms"));
+    FirstPersonArms->SetupAttachment(Camera);FirstPersonArms->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    FirstPersonArms->SetOnlyOwnerSee(true);FirstPersonArms->SetCastShadow(false);
+    GoggleAssembly=CreateDefaultSubobject<UStaticMeshComponent>(TEXT("IndependentGoggles"));
+    GoggleAssembly->SetupAttachment(GoggleHinge);GoggleAssembly->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     InspectionLight=CreateDefaultSubobject<USpotLightComponent>(TEXT("PracticeAppearanceLight"));
     InspectionLight->SetupAttachment(Camera);InspectionLight->SetRelativeLocation(FVector(10,0,0));
     InspectionLight->Intensity=12000;InspectionLight->AttenuationRadius=800;
@@ -77,7 +93,24 @@ ASPCharacter::ASPCharacter(const FObjectInitializer& Init)
 void ASPCharacter::BeginPlay()
 {
     Super::BeginPlay();
-    SpyAppearance=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Meshy/Spy/SK_Spy.SK_Spy"));
+    SpyAppearance=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Equipment/SK_SpyEquipment.SK_SpyEquipment"));
+    if (!SpyAppearance) SpyAppearance=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Meshy/Spy/SK_Spy.SK_Spy"));
+    FirstPersonArms->SetSkeletalMesh(LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Equipment/SK_MercArms.SK_MercArms")));
+    CarbineAsset=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Equipment/SK_Carbine.SK_Carbine"));
+    LauncherAsset=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Equipment/SK_Launcher.SK_Launcher"));
+    CarbineFire=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Equipment/CarbineFire.CarbineFire"));
+    LauncherFire=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Equipment/LauncherFire.LauncherFire"));
+    SpyEquip=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Equipment/SpyEquip.SpyEquip"));
+    MercEquip=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Equipment/MercEquip.MercEquip"));
+    GoggleAssembly->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Characters/Equipment/SM_Goggles.SM_Goggles")));
+    if (UMaterialInterface* Lens=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Characters/Equipment/M_GoggleLens.M_GoggleLens")))
+    {LensMaterial=UMaterialInstanceDynamic::Create(Lens,this);GoggleLeft->SetMaterial(0,LensMaterial);GoggleRight->SetMaterial(0,LensMaterial);}
+    GoggleHinge->AttachToComponent(GetMesh(),FAttachmentTransformRules::KeepRelativeTransform);
+    for (UStaticMeshComponent* Lens:{GoggleLeft,GoggleRight})
+    {Lens->SetRelativeScale3D(FVector(.027f,.027f,.008f));Lens->SetRelativeRotation(FRotator(90,0,0));}
+    // Lens positions and pivot are in the skeletal mesh's reference coordinates.
+    GoggleLeft->SetRelativeLocation(FVector(-5.6f,20.f-11.f,168.5f-174.f));
+    GoggleRight->SetRelativeLocation(FVector(5.6f,20.f-11.f,168.5f-174.f));
     MercAppearance=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Meshy/Merc/SK_Merc.SK_Merc"));
     if (USkeletalMesh* Mesh=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Prototype/Mannequin/SK_Prototype.SK_Prototype"))) GetMesh()->SetSkeletalMesh(Mesh);
     const TCHAR* Names[]={TEXT("Idle"),TEXT("Walk"),TEXT("CrouchIdle"),TEXT("Crouch"),TEXT("Jump"),TEXT("Fall"),TEXT("Land"),TEXT("Vault")};
@@ -96,6 +129,8 @@ void ASPCharacter::EndPlay(const EEndPlayReason::Type Reason)
     if (APlayerController* PC=Cast<APlayerController>(Controller))
         if (auto* Sub=ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
             if (Mapping) Sub->RemoveMappingContext(Mapping);
+    ResetCameraView();
+    if (HasAuthority() && DeployedCamera) DeployedCamera->Destroy();
     Super::EndPlay(Reason);
 }
 void ASPCharacter::UnPossessed()
@@ -115,6 +150,11 @@ void ASPCharacter::ConfigureRole()
     if (!GetPlayerState<ASPPlayerState>()) return;
     bAiming=false;
     const bool Spy=IsSpy();
+    if (!bRoleConfigured || bConfiguredSpy!=Spy)
+    {
+        if (HasAuthority()) {SetWeapon(Spy?ESPWeapon::Hands:ESPWeapon::Carbine);StunnedUntil=0.f;}
+        ResetCameraView();
+    }
     const ASPGameState* GS=GetWorld()->GetGameState<ASPGameState>();
     if (!GS || !GS->bPractice) bInspectAppearance=false;
     const bool ThirdPerson=Spy || bInspectAppearance;
@@ -128,8 +168,10 @@ void ASPCharacter::ConfigureRole()
         GetMesh()->SetSkeletalMesh(Appearance);
         GetMesh()->EmptyOverrideMaterials();
         PlayingClip=INDEX_NONE;
+        GetMesh()->SetAnimInstanceClass(USPEquipmentAnimInstance::StaticClass());
     }
-    bUseControllerRotationYaw=!ThirdPerson;GetCharacterMovement()->bOrientRotationToMovement=ThirdPerson;
+    bUseControllerRotationYaw=!ThirdPerson || (Spy && WeaponState.Mode!=ESPWeapon::Hands && !bInspectAppearance);
+    GetCharacterMovement()->bOrientRotationToMovement=ThirdPerson && !bUseControllerRotationYaw;
     GetCharacterMovement()->MaxWalkSpeed=Spy?SpySpeed:MercSpeed;
     // A 1.05 m passage fits only the spy's crouched capsule.
     GetCharacterMovement()->SetCrouchedHalfHeight(Spy?42.f:60.f);
@@ -143,6 +185,14 @@ void ASPCharacter::ConfigureRole()
     if (UMaterialInterface* M=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Prototype/M_Gear.M_Gear")))
     { Mask->SetMaterial(0,M);Vest->SetMaterial(0,M);Gun->SetMaterial(0,M); }
     GoggleLeft->SetOwnerNoSee(!Spy);GoggleRight->SetOwnerNoSee(!Spy);
+    const FReferenceSkeleton& Ref=GetMesh()->GetSkeletalMeshAsset()->GetRefSkeleton();
+    auto RefTransform=[&Ref](FName Name)
+    {
+        FTransform T=FTransform::Identity;int32 I=Ref.FindBoneIndex(Name);
+        while (I!=INDEX_NONE) {T=T*Ref.GetRefBonePose()[I];I=Ref.GetParentIndex(I);}return T;
+    };
+    HeadReference=RefTransform(TEXT("head"));SpineReference=RefTransform(TEXT("spine_03"));
+    FirstPersonArms->SetLeaderPoseComponent(GetMesh(),true);
     bConfiguredSpy=Spy;bRoleConfigured=true;
 }
 void ASPCharacter::Tick(float Delta)
@@ -152,11 +202,9 @@ void ASPCharacter::Tick(float Delta)
     const bool HasMesh=GetMesh()->GetSkeletalMeshAsset()!=nullptr;
     Body->SetVisibility(Health>0 && !HasMesh);Head->SetVisibility(Health>0 && !HasMesh);
     GetMesh()->SetVisibility(Health>0);Mask->SetVisibility(Health>0 && HasMesh && !bUsesMeshyAppearance);Vest->SetVisibility(Health>0 && HasMesh && !IsSpy() && !bUsesMeshyAppearance);
-    Gun->SetVisibility(Health>0 && !IsSpy() && !bInspectAppearance);
-    GoggleLeft->SetVisibility(Health>0 && HasMesh && IsSpy() && !bUsesMeshyAppearance);GoggleRight->SetVisibility(Health>0 && HasMesh && IsSpy() && !bUsesMeshyAppearance);
-    // Keep the hinge angle scalar: Euler decomposition flips axes beyond 90 degrees.
-    GoggleAngle=FMath::FInterpTo(GoggleAngle,bNightVision?0.f:-105.f,Delta,10.f);
-    GoggleHinge->SetRelativeRotation(FRotator(GoggleAngle,0,0));
+    Gun->SetVisibility(false);
+    UpdateEquipment(Delta);
+    Flashlight->SetWorldLocation(Camera->GetComponentLocation()+GetBaseAimRotation().Vector()*25.f);
     Flashlight->SetWorldRotation(GetBaseAimRotation());Flashlight->SetVisibility(bFlashlight && !IsSpy() && Health>0);
     const ASPGameState* PracticeState=GetWorld()->GetGameState<ASPGameState>();
     InspectionLight->SetVisibility(bInspectAppearance && PracticeState && PracticeState->bPractice && IsLocallyControlled());
@@ -169,6 +217,8 @@ void ASPCharacter::Tick(float Delta)
         Camera->PostProcessSettings.bOverride_AutoExposureBias=true;
         Camera->PostProcessSettings.AutoExposureBias=bNightVision?3.f:0.f;
     }
+    GetCharacterMovement()->MaxWalkSpeed=IsStunned()?0.f:(IsSpy()?SpySpeed:MercSpeed);
+    if (bCameraView && (!DeployedCamera || !IsRoundActive() || Traversal()->IsTraversing())) ResetCameraView();
     UpdateAnimation(Delta);
     if (HasAuthority() && IsRoundActive() && GetVelocity().Size2D()>35 && GetCharacterMovement()->IsMovingOnGround())
     {
@@ -187,9 +237,16 @@ void ASPCharacter::UpdateAnimation(float Delta)
     if (Falling) Index=GetVelocity().Z>50?4:5;
     else if (LandingClock>0) {Index=6;Loop=false;}
     else if (Traversal()->Motion.State==ESPTraversal::Vaulting || Traversal()->Motion.State==ESPTraversal::Climbing) {Index=7;Loop=false;}
-    if (Clips[Index] && Index!=PlayingClip) {GetMesh()->PlayAnimation(Clips[Index],Loop);PlayingClip=Index;}
-    if (Index==1 || Index==3) GetMesh()->SetPlayRate(FMath::Clamp(GetVelocity().Size2D()/(Index==1?200.f:110.f),.5f,1.8f));
-    else GetMesh()->SetPlayRate(1.f);
+    if (USPEquipmentAnimInstance* Anim=Cast<USPEquipmentAnimInstance>(GetMesh()->GetAnimInstance()))
+    {
+        Anim->Locomotion=Clips[Index];Anim->bLoopLocomotion=Loop;
+        Anim->LocomotionRate=(Index==1 || Index==3)?FMath::Clamp(GetVelocity().Size2D()/(Index==1?200.f:110.f),.5f,1.8f):1.f;
+        Anim->Equipment=IsSpy()?SpyEquip:MercEquip;
+        Anim->EquipmentWeight=Traversal()->IsTraversing()?0.f:EquipAlpha;
+        const float Progress=FMath::Clamp((ServerNow()-WeaponState.ChangedAt)/EquipDuration,0.f,1.f);
+        Anim->EquipmentTime=(WeaponState.Mode==ESPWeapon::Hands?1.f-Progress:Progress)*.7f;
+    }
+    PlayingClip=Index;
 }
 void ASPCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 {
@@ -239,10 +296,16 @@ void ASPCharacter::SetupPlayerInputComponent(UInputComponent* Input)
     EI->BindAction(AimAction,ETriggerEvent::Completed,this,&ASPCharacter::AimReleased);
     EI->BindAction(AimAction,ETriggerEvent::Canceled,this,&ASPCharacter::AimReleased);
     Button(EKeys::F,&ASPCharacter::ServerFlashlight);
-    Button(EKeys::Gamepad_FaceButton_Top,&ASPCharacter::EquipmentPressed);
+    UInputAction* WeaponAction=Button(EKeys::Q,&ASPCharacter::SwitchWeapon);
+    Mapping->MapKey(WeaponAction,EKeys::Gamepad_FaceButton_Top);
+    Button(EKeys::Gamepad_DPad_Up,&ASPCharacter::EquipmentPressed);
+    UInputAction* GadgetAction=Button(EKeys::G,&ASPCharacter::GadgetPressed);
+    Mapping->MapKey(GadgetAction,EKeys::Gamepad_RightShoulder);
+    UInputAction* CameraAction=Button(EKeys::C,&ASPCharacter::ViewStickyCamera);
+    Mapping->MapKey(CameraAction,EKeys::Gamepad_LeftShoulder);
     Button(EKeys::Gamepad_DPad_Right,&ASPCharacter::PracticeRole);
     UInputAction* InspectAction=Button(EKeys::V,&ASPCharacter::InspectAppearance);
-    Mapping->MapKey(InspectAction,EKeys::Gamepad_DPad_Up);
+    Mapping->MapKey(InspectAction,EKeys::Gamepad_DPad_Left);
     Button(EKeys::N,&ASPCharacter::NightVision);Button(EKeys::Tab,&ASPCharacter::PracticeRole);
     if (APlayerController* PC=Cast<APlayerController>(Controller))
         if (UEnhancedInputLocalPlayerSubsystem* Sub=ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
@@ -250,7 +313,7 @@ void ASPCharacter::SetupPlayerInputComponent(UInputComponent* Input)
 }
 void ASPCharacter::Move(const FInputActionValue& Value)
 {
-    if (!IsRoundActive() || !Controller || Traversal()->IsTraversing()) return;
+    if (!IsRoundActive() || !Controller || Traversal()->IsTraversing() || IsStunned() || bCameraView) return;
     FVector2D V=Value.Get<FVector2D>();FRotator R(0,Controller->GetControlRotation().Yaw,0);
     AddMovementInput(R.Vector(),V.Y);AddMovementInput(FRotationMatrix(R).GetUnitAxis(EAxis::Y),V.X);
 }
@@ -270,7 +333,7 @@ void ASPCharacter::InspectAppearance()
     bInspectAppearance=!bInspectAppearance;
     ConfigureRole();
 }
-void ASPCharacter::AimPressed() {bAiming=!IsSpy() && IsRoundActive();}
+void ASPCharacter::AimPressed() {bAiming=WeaponState.Mode!=ESPWeapon::Hands && IsRoundActive() && !IsStunned();}
 void ASPCharacter::AimReleased() {bAiming=false;}
 float ASPCharacter::GogglePitch() const {return GoggleAngle;}
 float ASPCharacter::CameraDistance() const {return Boom->TargetArmLength;}
@@ -280,12 +343,18 @@ TArray<FString> ASPCharacter::InputKeys() const
 {
     TArray<FString> Keys;if (Mapping) for (const auto& Key:Mapping->GetMappings()) Keys.Add(Key.Key.ToString());return Keys;
 }
-void ASPCharacter::JumpPressed() { if (IsRoundActive() && IsSpy()) ServerTraversal(); }
+void ASPCharacter::JumpPressed()
+{
+    if (!IsRoundActive() || IsStunned() || bCameraView) return;
+    if (IsSpy()) ServerTraversal();
+    else Jump(); // CharacterMovement predicts and replicates an ordinary jump; never probes ledges.
+}
 void ASPCharacter::ServerTraversal_Implementation()
 {
-    if (!IsRoundActive() || !IsSpy()) return;
+    if (!IsRoundActive() || !IsSpy() || IsStunned()) return;
     if (Traversal()->Motion.State==ESPTraversal::Hanging) {Traversal()->Climb();return;}
-    if (!Traversal()->TryTraversal() && !Traversal()->IsTraversing()) Jump();
+    if (Traversal()->TryTraversal()) {SetWeapon(ESPWeapon::Hands);ResetCameraView();}
+    else if (!Traversal()->IsTraversing()) Jump();
 }
 void ASPCharacter::ServerDrop_Implementation() { if (IsRoundActive() && Traversal()->IsTraversing()) Traversal()->Drop(); }
 void ASPCharacter::CrouchPressed()
@@ -305,7 +374,7 @@ void ASPCharacter::ChoosePracticeRole(ESPTeam SelectedTeam)
     {
         Traversal()->Drop();UnCrouch();
         if (ASPPlayerState* PS=GetPlayerState<ASPPlayerState>()) {PS->Team=SelectedTeam;PS->ForceNetUpdate();}
-        bInteractHeld=false;bNightVision=false;bFlashlight=false;ConfigureRole();
+        bInteractHeld=false;bNightVision=false;bFlashlight=false;ResetCameraView();ConfigureRole();
         ClientFeedback(IsSpy()?TEXT("Practice character: spy"):TEXT("Practice character: merc"));
     }
 }
@@ -315,10 +384,11 @@ void ASPCharacter::NightVision()
     else if (IsSpy() && IsRoundActive()) {bNightVision=true;ServerNightVision(true);}
 }
 void ASPCharacter::ServerNightVision_Implementation(bool Enabled) {bNightVision=Enabled && IsSpy() && IsRoundActive();ForceNetUpdate();}
-void ASPCharacter::InteractPressed() {ServerInteract(true);}
+void ASPCharacter::InteractPressed() {if (!bCameraView) ServerInteract(true);}
 void ASPCharacter::InteractReleased() {ServerInteract(false);}
-void ASPCharacter::AttackPressed() {ServerAttack();}
-void ASPCharacter::ServerInteract_Implementation(bool Held) {bInteractHeld=Held && IsSpy() && IsRoundActive() && !Traversal()->IsTraversing();}
+void ASPCharacter::AttackPressed() {if (!bCameraView) ServerAttack();}
+void ASPCharacter::GadgetPressed() {if (!bCameraView) ServerUseGadget();}
+void ASPCharacter::ServerInteract_Implementation(bool Held) {bInteractHeld=Held && IsSpy() && IsRoundActive() && !IsStunned() && !Traversal()->IsTraversing();}
 void ASPCharacter::ServerFlashlight_Implementation() {if (IsRoundActive() && !IsSpy()) {bFlashlight=!bFlashlight;OnRep_Flashlight();}}
 void ASPCharacter::OnRep_Flashlight() {Flashlight->SetVisibility(bFlashlight && Health>0);}
 void ASPCharacter::ClientFeedback_Implementation(const FString& Text) {Feedback=Text;FeedbackUntil=GetWorld()->GetTimeSeconds()+2.f;}
@@ -330,16 +400,49 @@ void ASPCharacter::MulticastSound_Implementation(USoundBase* Sound,FVector Locat
     USoundAttenuation* Att=NewObject<USoundAttenuation>(this);Att->Attenuation=Settings;
     UGameplayStatics::PlaySoundAtLocation(this,Sound,Location,FRotator::ZeroRotator,1.f,1.f,0.f,Att);
 }
-void ASPCharacter::ServerAttack_Implementation()
+void ASPCharacter::ServerAttack_Implementation() {FireEquippedWeapon(false);}
+void ASPCharacter::ServerUseGadget_Implementation()
 {
-    if (!IsRoundActive() || !Controller || Traversal()->IsTraversing()) return;
+    if (!IsSpy() || !IsRoundActive()) return;
+    if (WeaponState.Mode!=ESPWeapon::Taser) {ClientFeedback(TEXT("Draw launcher with Y / Q first"));return;}
+    if (SelectedGadget==ESPSpyGadget::StickyCamera) FireEquippedWeapon(true);
+}
+void ASPCharacter::FireEquippedWeapon(bool bGadgetShot)
+{
+    if (!IsRoundActive() || !Controller || Traversal()->IsTraversing() || IsStunned()) return;
+    if (WeaponState.Mode!=ESPWeapon::Hands && !WeaponReady()) return;
+    if (!IsSpy() && WeaponState.Mode!=ESPWeapon::Carbine) return;
     const double Now=GetWorld()->GetTimeSeconds();if (Now-LastAttackTime<(IsSpy()?.8:.22)) return;LastAttackTime=Now;
     FVector Eye;FRotator Aim;GetActorEyesViewPoint(Eye,Aim);
-    if (!IsSpy()) MulticastSound(ShotSound,Eye);
+    const bool Ranged=WeaponState.Mode!=ESPWeapon::Hands;
+    if (Ranged) {Eye=Camera->GetComponentLocation();Aim=GetBaseAimRotation();}
+    if (WeaponState.Mode!=ESPWeapon::Hands) {MulticastSound(ShotSound,Eye);MulticastWeaponFire();}
     FCollisionQueryParams Q(SCENE_QUERY_STAT(Weapon),false,this);FHitResult Hit;
-    GetWorld()->LineTraceSingleByChannel(Hit,Eye,Eye+Aim.Vector()*(IsSpy()?TakedownReach:5000),ECC_Visibility,Q);
+    const float Range=IsSpy()?(WeaponState.Mode==ESPWeapon::Hands?TakedownReach:(bGadgetShot?2500.f:TaserRange)):5000.f;
+    GetWorld()->LineTraceSingleByChannel(Hit,Eye,Eye+Aim.Vector()*Range,ECC_Visibility,Q);
+    // Camera aiming chooses the reticle target; a second trace prevents firing through nearby cover.
+    if (Ranged)
+    {
+        const FVector Target=Hit.bBlockingHit?Hit.ImpactPoint:Eye+Aim.Vector()*Range;
+        const FVector Muzzle=GetMesh()->GetSocketLocation(TEXT("hand_r"))+Aim.Vector()*25.f;
+        FHitResult Obstruction;
+        if (GetWorld()->LineTraceSingleByChannel(Obstruction,Muzzle,Target,ECC_Visibility,Q)) Hit=Obstruction;
+    }
+    if (IsSpy() && bGadgetShot)
+    {
+        if (!Hit.bBlockingHit || (Hit.GetActor() && Hit.GetActor()->IsA<ASPCharacter>())) {ClientFeedback(TEXT("Aim at a wall for sticky camera"));return;}
+        if (DeployedCamera) DeployedCamera->Destroy();
+        FActorSpawnParameters Params;Params.Owner=this;Params.Instigator=this;
+        DeployedCamera=GetWorld()->SpawnActor<ASPStickyCamera>(Hit.ImpactPoint+Hit.ImpactNormal*8.f,Hit.ImpactNormal.Rotation(),Params);
+        ForceNetUpdate();ClientFeedback(TEXT("Camera attached | LB / C to view"));return;
+    }
     ASPCharacter* Victim=Cast<ASPCharacter>(Hit.GetActor());
     if (!Victim || Victim->Health<=0 || Victim->IsSpy()==IsSpy()) {ClientFeedback(TEXT("No hit"));return;}
+    if (IsSpy() && WeaponState.Mode==ESPWeapon::Taser)
+    {
+        Victim->StunnedUntil=ServerNow()+StunDuration;Victim->GetCharacterMovement()->StopMovementImmediately();Victim->ForceNetUpdate();
+        Victim->ClientFeedback(TEXT("Tased"));ClientFeedback(TEXT("Merc stunned"));return;
+    }
     if (IsSpy() && FVector::DotProduct(Victim->GetActorForwardVector(),(GetActorLocation()-Victim->GetActorLocation()).GetSafeNormal2D())>-.45f)
     {ClientFeedback(TEXT("Takedown requires rear approach"));return;}
     FDamageEvent Event;Victim->TakeDamage(IsSpy()?100:ShotDamage,Event,Controller,this);
@@ -351,7 +454,7 @@ float ASPCharacter::TakeDamage(float Amount,const FDamageEvent& Event,AControlle
     const float Applied=FMath::Min(Health,Amount);Health-=Applied;ForceNetUpdate();ClientFeedback(TEXT("Taking damage"));
     if (Health<=0)
     {
-        bInteractHeld=false;bFlashlight=false;bNightVision=false;Traversal()->Drop();GetCharacterMovement()->StopMovementImmediately();GetCharacterMovement()->DisableMovement();
+        bInteractHeld=false;bFlashlight=false;bNightVision=false;SetWeapon(ESPWeapon::Hands);if (DeployedCamera) DeployedCamera->Destroy();Traversal()->Drop();GetCharacterMovement()->StopMovementImmediately();GetCharacterMovement()->DisableMovement();
         const TWeakObjectPtr<AController> PC(Controller);FTimerHandle Handle;
         GetWorldTimerManager().SetTimer(Handle,FTimerDelegate::CreateWeakLambda(this,[this,PC]()
         {if (PC.IsValid()) if (ASPGameMode* GM=GetWorld()->GetAuthGameMode<ASPGameMode>()) GM->Respawn(PC.Get());}),5,false);
@@ -360,7 +463,7 @@ float ASPCharacter::TakeDamage(float Amount,const FDamageEvent& Event,AControlle
 }
 void ASPCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);DOREPLIFETIME(ASPCharacter,Health);DOREPLIFETIME(ASPCharacter,bFlashlight);DOREPLIFETIME(ASPCharacter,bNightVision);
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);DOREPLIFETIME(ASPCharacter,Health);DOREPLIFETIME(ASPCharacter,bFlashlight);DOREPLIFETIME(ASPCharacter,bNightVision);DOREPLIFETIME(ASPCharacter,WeaponState);DOREPLIFETIME(ASPCharacter,StunnedUntil);DOREPLIFETIME(ASPCharacter,DeployedCamera);DOREPLIFETIME(ASPCharacter,SelectedGadget);
 }
 
 void ASPCharacter::Exercise(const FString& Action)

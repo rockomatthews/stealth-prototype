@@ -1,44 +1,45 @@
-# Rigged character practice
+# Character and equipment playtest
 
-The Meshy spy and masked merc now have separate skeletal meshes using the existing prototype animation skeleton. Both derived meshes contain 80,000 triangles, down from 1,767,257 and 2,101,917 respectively. Skin weights are limited to four influences per vertex. Original static models and source archives are preserved locally; the public repository includes the optimized rigged sources and runtime assets.
+Open `StealthPrototype.uproject`, open `/Game/Maps/Prototype`, and press Play with one player for solo practice. Connect the Xbox controller and click the game window. The spy is third person; the merc is first person. Temporary role switching and appearance view are restricted to practice.
 
-Open `StealthPrototype.uproject`, open `/Game/Maps/Prototype`, and press Play with one player. This starts practice mode.
-
-| Action | Keyboard and mouse | Xbox controller |
+| Action | Keyboard / mouse | Xbox controller |
 | --- | --- | --- |
-| Choose spy | 1 | D-pad Right switches roles |
-| Choose merc | 2 | D-pad Right switches roles |
-| Switch roles | Tab | D-pad Right |
-| Toggle appearance view | V | D-pad Up |
-| Move and look | WASD and mouse | Left and right sticks |
-| Crouch or stand | Left Ctrl | B |
-| Jump or traverse as spy | Space | A |
-| Spy night vision | N | Y |
-| Merc flashlight | F | Y |
-| Aim as merc | Right mouse | Left trigger |
+| Select spy / merc | 1 / 2 | D-pad Right cycles roles |
+| Switch role | Tab | D-pad Right |
+| Appearance view | V | D-pad Left |
+| Move / look | WASD / mouse | Left / right stick |
+| Jump | Space | A |
+| Crouch / spy drop | Left Ctrl | B |
+| Switch weapon | Q | Y |
+| Night vision as spy | N | D-pad Up |
+| Flashlight as merc | F | D-pad Up |
+| Taser / merc fire / unarmed spy takedown | Left click | Right trigger |
+| Fire selected spy gadget | G | Right bumper |
+| Aim equipped weapon | Right mouse | Left trigger |
+| Hold to hack as spy | E | X |
+| Enter / leave deployed camera | C | Left bumper |
 
-The merc normally uses first person. Appearance view moves the camera behind the body and adds a local inspection light so you can judge its silhouette, materials and movement. While standing still, move the mouse or right stick to orbit around either character. Toggle it off to return to the role's normal camera. This view, its light and role switching are restricted to practice mode. Movement speeds and the existing spy third-person camera remain independently tuned.
+The merc can jump normally. He cannot catch ledges, vault, hang or climb. Spy traversal retains the existing marked-ledge behavior. A successful spy traversal holsters the launcher.
 
-Check idle, walking, crouching, jumping, landing, vaulting and climbing. Watch the shoulders, elbows, hips, knees, wrists and equipment while moving. These are prototype skin weights transferred from a fitted mannequin; close-up finger articulation and production deformation cleanup remain art work. The source spy's goggles and back equipment are currently part of the skinned body, so the original separate proxy goggles are hidden to avoid duplicate equipment. The night-vision screen effect still works; independently hinged goggles and state-controlled lens emission require separating those accessories.
+Spy Y / Q toggles **hands ↔ taser launcher**. Gadget selection is independent; sticky camera is currently the selected gadget, fired with **RB / G** while the launcher is drawn. Drawing takes 0.7 seconds and the aiming reticle appears when the weapon is ready. The launcher moves from the shoulder holster into a two-handed pose. RT / click always fires the taser with the launcher drawn; RB / G launches the selected gadget without holstering or switching weapons. With empty hands, RT retains the rear-only takedown. The taser has a 12 m trace range measured from the aiming view and stuns a merc for three seconds without health damage. Sticky cameras attach to blocking geometry, last up to 60 seconds, and can be viewed with LB / C. Deploying a new camera replaces the previous one. Movement and firing are blocked while watching its feed; LB / C returns to the character.
+
+Merc Y toggles between the carbine and holstered hands. The supplied carbine is now a 24,000-triangle skeletal weapon with grip/muzzle helper bones and a short recoil animation. Owner-only first-person arms share the merc body pose; other players see the world weapon. Aim adjusts field of view and viewmodel placement. Shooting and taser/camera traces use the aiming view with a second check from the weapon side to block shots through nearby cover. Prototype weapons do not yet have ammunition management or reload animations.
+
+The spy's original binocular geometry is separate from the body. D-pad Up / N rotates it about a head-following hinge, enables both green emissive lenses when lowered, and enables night vision. Raised goggles have dark lenses. Goggle state and equipped weapon selection replicate to the other PIE clients. The launcher and goggles are separate derived assets; original Meshy sources and previous character rigs remain untouched.
+
+Appearance view adds a local light and permits orbiting while idle. Toggle it off to judge the normal camera and reticle. Check movement, crouching, jump/landing, spy traversal, weapon draw/holster, merc aim, and goggles in both states. Look closely at shoulders, elbows, wrists, equipment intersections and camera comfort. These remain prototype skin weights and authored equipment poses; production hand/finger cleanup and animation polish are ongoing art work.
 
 ## Assets and rebuild
 
-- Spy: `/Game/Characters/Meshy/Spy/SK_Spy`
-- Merc: `/Game/Characters/Meshy/Merc/SK_Merc`
-- Textures: original imported 2048 pixel maps under `/Game/Meshy/Imported_20261020`
-- Blender and FBX sources: `Art/RiggedCharacters`
-- Preparation: `Scripts/prepare_meshy_characters.py` in Blender 4.5 background mode
-- Skinning and FBX export: `Scripts/rig_meshy_characters.py` in Blender
-- Unreal import: `Scripts/import_rigged_characters.py` in a full editor session
+- Character rigs: `Content/Characters/Meshy`, plus derived spy `Content/Characters/Equipment/SK_SpyEquipment`
+- Equipment, arms, draw and recoil animations: `Content/Characters/Equipment`
+- Original rig sources: `Art/RiggedCharacters`
+- Derived equipment sources: `Art/Equipment`
+- Blender equipment build: `Scripts/prepare_equipment.py` (Blender 4.5)
+- Full editor equipment import: `Scripts/import_equipment.py` or project MCP `import_equipment`
 
-For a fresh public checkout, first migrate the licensed mannequin skeleton and animation clips as described in README.md. Raw Meshy source files and high-poly character static imports remain local, so preparation scripts require those original sources; the included rigged FBX files and runtime assets do not require re-running preparation. The imported merc carbine is included as an art asset but is not yet equipped in gameplay.
+A fresh public checkout needs the licensed mannequin skeleton and animation clips migrated as described in README.md. Rebuilding the carbine from scratch needs the original local Meshy source; the derived FBX and runtime assets are included. Gameplay does not use Mover.
 
-The import script rebuilds only the derived skeletal meshes and checks for a shared skeleton and human-scale bounds. It does not replace the original static imports. Preparation requires the mannequin export at `Saved/ArtMigration/Prototype.fbx`, produced by the existing mannequin migration workflow.
+## Validation
 
-## Verified on this Mac
-
-The Development Editor build passed and the updated acceptance suite passed 50 of 50 checks. Coverage includes both actual runtime mesh paths, animated head scale and position, role switching, controller appearance view, normal role cameras, movement, crouching, traversal, four-client replication, combat, hacking, respawns and round reset. Controller checks inject Xbox inputs through Enhanced Input; they do not establish physical controller or Xbox console validation.
-
-The final visual pass checked the textured spy standing, the textured merc standing and the merc crouching. Material slot assignments were read back and saved after correcting the initial empty slots. A live pose check caught and fixed a 100-fold animated root scale mismatch that asset bounds alone did not detect. The final suite includes regression checks for that failure.
-
-Evidence is saved under `Saved/RiggingQA`: `build-verified.log`, `acceptance-final.log`, `final_appearance_check.json`, and `unreal_rig_import.json`. At the end-of-day checkpoint, ordinary input is restored, play is stopped and the editor project is saved. Press Play tomorrow to start solo practice. Independently hinged goggles, the drawn spy launcher and production weight cleanup remain separate art integration work.
+See TEST_RESULTS.md for the dated final result. Evidence and actual runtime observations are local under `Saved/EquipmentQA` and `Saved/acceptance.json`. Controller automation injects Xbox events through Enhanced Input and gameplay RPCs. It does not replace physical-controller testing, separate-machine internet testing or Xbox console validation. Internet Host/Join remains deferred.
