@@ -4,7 +4,7 @@
 #include "SPTraversalMovement.generated.h"
 
 UENUM(BlueprintType)
-enum class ESPTraversal : uint8 { Grounded, Vaulting, Hanging, Climbing };
+enum class ESPTraversal : uint8 { Grounded, Vaulting, Hanging, Climbing, Rope, RopeExit };
 
 USTRUCT(BlueprintType)
 struct FSPTraversalMotion
@@ -16,6 +16,11 @@ struct FSPTraversalMotion
     UPROPERTY() float ServerStart = 0;
     UPROPERTY() float Duration = 0;
     UPROPERTY() uint16 Revision = 0;
+    UPROPERTY() bool bVentCrouch=false;
+    UPROPERTY() bool bEnteringVent=false;
+    UPROPERTY() float VentStartedAt=0;
+    UPROPERTY() float VentPhaseTime=0;
+    UPROPERTY() float RopeBaseZ=90;
 };
 
 UCLASS()
@@ -29,6 +34,14 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Traversal") float MaxLedgeHeight = 220.f;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="Traversal") float MinLedgeHeight = 65.f;
     bool TryTraversal();
+    bool TryRope();
+    virtual bool CanCrouchInCurrentState() const override;
+    virtual void UpdateCharacterStateBeforeMovement(float DeltaSeconds) override;
+    virtual void ProcessLanded(const FHitResult& Hit,float RemainingTime,int32 Iterations) override;
+    virtual void HandleImpact(const FHitResult& Hit,float TimeSlice=0.f,const FVector& MoveDelta=FVector::ZeroVector) override;
+    void SetRopeInput(float Axis);
+    bool IsOnRope() const {return Motion.State==ESPTraversal::Rope || Motion.State==ESPTraversal::RopeExit;}
+    UPROPERTY(EditDefaultsOnly,Category="Traversal") float RopeSpeed=120.f;
     bool Climb();
     void Drop();
     bool IsTraversing() const { return Motion.State != ESPTraversal::Grounded; }
@@ -43,4 +56,9 @@ private:
     TWeakObjectPtr<UPrimitiveComponent> Ledge;
     int32 Stage = 0;
     uint16 SourceID = 0;
+    TWeakObjectPtr<class ASPRope> ActiveRope;
+    float RopeAxis=0;
+    float RopeInputAt=-10;
+    int32 RopeStage=0;
+    void TickRope();
 };

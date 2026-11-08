@@ -1,0 +1,44 @@
+{
+  "duration": 3.2,
+  "floor_z": 780.0,
+  "rope_body_to_lip": 60.0,
+  "root_keys": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      0.5,
+      0,
+      0
+    ],
+    [
+      1.4,
+      25,
+      120
+    ],
+    [
+      1.65,
+      25,
+      150
+    ],
+    [
+      2.3,
+      100,
+      150
+    ],
+    [
+      3.2,
+      140,
+      150
+    ]
+  ],
+  "support": [
+    "reach lip",
+    "pull chest up",
+    "right knee on lip",
+    "shift weight inside",
+    "bring trailing leg through"
+  ]
+}

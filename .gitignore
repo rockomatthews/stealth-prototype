@@ -18,5 +18,8 @@ __pycache__/
 /Content/Meshy/Imported_20261020/Merc/SM_Merc.uasset
 /Content/Meshy/Imported_20261020/Merc/M_Merc.uasset
 
+# Reproducible animation authoring snapshots; retain locally.
+/Art/Grab/*.blend
+
 # Recreate Epic example content from your own Unreal installation.
 /Content/Prototype/Mannequin/

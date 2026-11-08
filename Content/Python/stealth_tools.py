@@ -29,7 +29,8 @@ class StealthProjectTools(unreal.ToolsetDefinition):
             player_index: Player join order, 0 through 3.
             action: place_ledge, place_vault, place_terminal, place_open, traverse,
                 drop, hack, release, fire, role, crouch, nightvision, damage,
-                expire, near_complete, network_lag or network_reset.
+                expire, near_complete, network_lag, network_reset, vent_review_camera,
+                review_slow, review_freeze, review_normal or review_player_view.
         """
         return unreal.SPDiagnostics.exercise(player_index,action)
     @toolset_registry.tool_call
@@ -69,3 +70,54 @@ class StealthProjectTools(unreal.ToolsetDefinition):
         script=Path(unreal.Paths.project_dir())/'Scripts'/'import_equipment.py'
         exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__'})
         return 'Equipment imported and saved'
+
+    @toolset_registry.tool_call
+    @staticmethod
+    def import_camera_assets() -> str:
+        """Create the fixed original camera audio and gas material with PIE stopped."""
+        if unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world() is not None: raise RuntimeError('Stop PIE before importing')
+        script=Path(unreal.Paths.project_dir())/'Scripts'/'import_camera_assets.py'
+        exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__'})
+        return 'Camera assets imported and saved'
+
+    @toolset_registry.tool_call
+    @staticmethod
+    def import_grab_animations() -> str:
+        """Import fixed original paired grab clips and finisher audio with PIE stopped."""
+        if unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world() is not None: raise RuntimeError('Stop PIE before importing')
+        script=Path(unreal.Paths.project_dir())/'Scripts'/'import_grab_animations.py'
+        exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__'})
+        return 'Grab animations imported and saved'
+
+    @toolset_registry.tool_call
+    @staticmethod
+    def prepare_warehouse() -> str:
+        """Import original warehouse art/actions and save the new Warehouse map; PIE stopped."""
+        script=Path(unreal.Paths.project_dir())/'Scripts'/'import_warehouse.py'
+        exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__'})
+        return 'Warehouse assets and map imported and saved'
+
+    @toolset_registry.tool_call
+    @staticmethod
+    def prepare_recovery_fx() -> str:
+        """Create and save the fixed original recovery electrical material; PIE stopped."""
+        script=Path(unreal.Paths.project_dir())/'Scripts'/'import_recovery_fx.py'
+        exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__'})
+        return 'Recovery electricity material saved'
+
+    @toolset_registry.tool_call
+    @staticmethod
+    def prepare_vent_entry() -> str:
+        """Import only the fixed vent mantle/crawl clips and refresh their saved map preview."""
+        script=Path(unreal.Paths.project_dir())/'Scripts'/'import_vent_entry.py'
+        exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__'})
+        return 'Vent mantle and matching crawl imported and saved'
+
+    @toolset_registry.tool_call
+    @staticmethod
+    def open_map(map_name: str) -> str:
+        """Open a fixed project map with PIE stopped: Warehouse or Prototype QA."""
+        if map_name not in ('Warehouse','Prototype'): raise ValueError('Unknown project map')
+        if unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world() is not None: raise RuntimeError('Stop PIE first')
+        if not unreal.get_editor_subsystem(unreal.LevelEditorSubsystem).load_level('/Game/Maps/'+map_name): raise RuntimeError('Map did not load')
+        return map_name+' loaded'

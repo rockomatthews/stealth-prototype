@@ -1,0 +1,42 @@
+{
+  "MercEquipView": {
+    "seconds": 0.7,
+    "frames": 43,
+    "release_seconds": null
+  },
+  "MercThrowView": {
+    "seconds": 0.9666666666666667,
+    "frames": 59,
+    "release_seconds": 0.42
+  },
+  "MercThrow": {
+    "seconds": 0.9666666666666667,
+    "frames": 59,
+    "release_seconds": 0.42
+  },
+  "SpyRope": {
+    "seconds": 0.8,
+    "frames": 49,
+    "release_seconds": null
+  },
+  "SpyVentEntry": {
+    "seconds": 3.2,
+    "frames": 193,
+    "release_seconds": null
+  },
+  "MercKnockout": {
+    "seconds": 0.8,
+    "frames": 49,
+    "release_seconds": null
+  },
+  "SpyVentCrawl": {
+    "seconds": 1.0,
+    "frames": 61,
+    "release_seconds": null
+  },
+  "SpyVentIdle": {
+    "seconds": 0.2,
+    "frames": 13,
+    "release_seconds": null
+  }
+}

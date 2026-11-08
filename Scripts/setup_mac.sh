@@ -29,4 +29,4 @@ if [[ ! -f "$project_dir/Content/Maps/Prototype.umap" \
 fi
 echo "Build and asset generation finished. Opening the prototype map."
 open -a "$engine_root/Engine/Binaries/Mac/UnrealEditor.app" \
-    --args "$project_dir/StealthPrototype.uproject" /Game/Maps/Prototype
+    --args "$project_dir/StealthPrototype.uproject" /Game/Maps/Warehouse

@@ -1,0 +1,113 @@
+"""Real Opus/RPC/playback checks, using generated tones rather than microphones.
+Speech quality and capture still require separate-machine human validation.
+"""
+import json,time
+from pathlib import Path
+from run_acceptance import *
+results=[]
+def owned(data,index):
+    identity=player(data,index)['playerId']
+    return next(p for w in data['worlds'] for p in w['pawns'] if p['local'] and p['playerId']==identity)
+def voice(data,index):return owned(data,index)['voice']
+def from_count(data,receiver,sender):return voice(data,receiver)['from'].get(str(player(data,sender)['playerId']),0)
+def wire_count(data,receiver,sender):return voice(data,receiver)['rawFrom'].get(str(player(data,sender)['playerId']),0)
+def test(name,predicate,seconds=12):
+    observed=wait_for(predicate,seconds);results.append({'name':name,'passed':True,'observed':observed})
+    Path('Saved/EquipmentQA/grab-voice.json').write_text(json.dumps(results,indent=2));print('PASS',name,flush=True)
+def pair(data,active=True):return synced(data,2,lambda p:p['restrained']==active and (p['captor'] if active else p['grabToken']==0)) and synced(data,1,lambda p:p['restrained']==active and not p['captor'])
+def start_grab():
+    action(0,'takedown_rear');time.sleep(.6);pad(2,'x')
+    test('rear interaction establishes replicated grab without killing',lambda d:pair(d) and synced(d,1,lambda p:p['health']==100))
+try:
+    stop();call(project_tool,'open_map',map_name='Prototype');start(4)
+    test('four players and private voice components ready',lambda d:len(d['worlds'])==4 and all(w['phase']==1 and len(w['pawns'])==4 for w in d['worlds']) and all('voice' in owned(d,i) for i in range(4)),25)
+    test('team microphone defaults open but automated PIE never captures mic',lambda d:all(voice(d,i)['openTeamMic'] and not voice(d,i)['microphoneCapturing'] for i in range(4)))
+    action(2,'voice_team')
+    test('spy team audio encodes, relays and decodes only on spy teammate',lambda d:from_count(d,0,2)>=1 and voice(d,0)['decodedBytes']>0 and voice(d,0)['nonzeroSamples']>0 and voice(d,0)['audioStarts']>0 and wire_count(d,1,2)==0 and wire_count(d,3,2)==0 and voice(d,2)['received']==0)
+    action(1,'voice_team')
+    test('merc team audio reaches only merc teammate',lambda d:from_count(d,3,1)>=1 and wire_count(d,0,1)==0 and wire_count(d,2,1)==0)
+    before=voice(report(),2)['sent'];pad(2,'mic_mute')
+    test('View button mutes microphone',lambda d:voice(d,2)['muted'])
+    action(2,'voice_team');time.sleep(.4)
+    test('muted microphone cannot transmit even generated frames',lambda d:voice(d,2)['sent']==before)
+    pad(2,'mic_mute');test('View button unmutes microphone',lambda d:not voice(d,2)['muted'])
+    action(0,'takedown_front');time.sleep(.6);pad(2,'x');time.sleep(.3)
+    test('frontal grab rejected',lambda d:pair(d,False) and synced(d,1,lambda p:p['health']==100))
+    action(0,'duel_blocked');time.sleep(.6);pad(2,'x');time.sleep(.3)
+    test('distant grab through cover rejected',lambda d:pair(d,False))
+    action(0,'takedown_range');time.sleep(.6);pad(2,'x');time.sleep(.3)
+    test('rear grab beyond 1.5 metres rejected',lambda d:pair(d,False))
+    action(0,'takedown_rear');time.sleep(.6);pad(1,'b');test('merc crouches for stance test',lambda d:player(d,1)['crouched'])
+    pad(2,'x');time.sleep(.3);test('crouching merc cannot enter invalid standing hold',lambda d:pair(d,False))
+    pad(1,'b');time.sleep(.3);pad(2,'b');test('spy crouches before rear approach',lambda d:player(d,2)['crouched'])
+    pad(2,'x');test('spy safely stands into valid rear hold',lambda d:pair(d) and synced(d,2,lambda p:not p['crouched'] and p['z']>85))
+    pad(2,'b');test('stance-test release succeeds',lambda d:pair(d,False))
+    action(0,'takedown_rear');time.sleep(.6);pad(2,'rt');time.sleep(.3)
+    test('RT does not replace X as grab button',lambda d:pair(d,False))
+    start_grab()
+    test('both held players keep weapons holstered',lambda d:synced(d,1,lambda p:p['equipment']['equipAlpha']==0) and synced(d,2,lambda p:p['equipment']['equipAlpha']==0))
+    test('grab voice pair granted to exactly captor and victim',lambda d:voice(d,2)['pairToken']>0 and voice(d,1)['pairToken']==voice(d,2)['pairToken'] and voice(d,2)['pairPeer']==player(d,1)['playerId'] and voice(d,1)['pairPeer']==player(d,2)['playerId'] and voice(d,0)['pairToken']==0 and voice(d,3)['pairToken']==0)
+    baseline_rx=[voice(report(),i)['rawReceived'] for i in range(4)]
+    action(0,'voice_grab');action(3,'voice_grab');time.sleep(.4)
+    test('uninvolved players cannot inject audio into grab pair',lambda d:all(voice(d,i)['rawReceived']==baseline_rx[i] for i in range(4)) and player(d,0)['voice']['rejected']>0 and player(d,3)['voice']['rejected']>0)
+    baseline=report();pos=player(baseline,1)
+    action(1,'pad_move_down');time.sleep(.5);action(1,'pad_move_up');pad(1,'a');pad(1,'rt');pad(1,'y')
+    test('held merc cannot move, jump, fire or draw a weapon',lambda d:pair(d) and synced(d,1,lambda p:abs(p['x']-pos['x'])<2 and abs(p['y']-pos['y'])<2 and p['z']<105 and p['equipment']['weapon']==0) and synced(d,2,lambda p:p['health']==100))
+    spy_team_before=wire_count(report(),0,2);merc_team_before=wire_count(report(),3,1)
+    test('right-stick click and H are not voice bindings',lambda d:all(k not in owned(d,2)['inputKeys'] for k in ['Gamepad_RightThumbstick','H']))
+    test('grab voice opens automatically for both players',lambda d:all(voice(d,i)['automaticGrabVoice'] and voice(d,i)['desiredChannel']=='Grab' for i in [1,2]))
+    before_team_attempt=[voice(report(),i)['rawReceived'] for i in range(4)]
+    action(2,'voice_team');action(1,'voice_team');time.sleep(.4)
+    test('server blocks team transmission from held pair',lambda d:all(voice(d,i)['rawReceived']==before_team_attempt[i] for i in range(4)))
+    action(2,'voice_auto')
+    test('spy grab voice reaches captive and does not leak to teammate',lambda d:from_count(d,1,2)>=1 and wire_count(d,0,2)==spy_team_before and wire_count(d,3,2)==0)
+    action(1,'voice_auto')
+    test('merc can answer captor without leaking to merc teammate',lambda d:from_count(d,2,1)>=1 and wire_count(d,3,1)==merc_team_before and wire_count(d,0,1)==0)
+    pad(2,'mic_mute');test('master mute still applies during automatic grab voice',lambda d:voice(d,2)['muted'])
+    muted_sent=voice(report(),2)['sent'];action(2,'voice_auto');time.sleep(.3)
+    test('muted grab partner does not transmit',lambda d:voice(d,2)['sent']==muted_sent)
+    pad(2,'mic_mute');test('unmuting restores automatic grab channel',lambda d:not voice(d,2)['muted'] and voice(d,2)['desiredChannel']=='Grab')
+    pad(1,'b');time.sleep(.3);test('held merc cannot release captors grab',lambda d:pair(d))
+    pad(2,'b');test('B releases both living players and closes pair route',lambda d:pair(d,False) and voice(d,2)['pairToken']==0 and voice(d,1)['pairToken']==0)
+    recv_before=[voice(report(),i)['rawReceived'] for i in range(4)]
+    action(2,'voice_grab');action(1,'voice_stale');time.sleep(.5)
+    test('released and stale grab packets are rejected',lambda d:all(voice(d,i)['rawReceived']==recv_before[i] for i in range(4)) and player(d,2)['voice']['rejected']>=1)
+    test('team channel resumes automatically after release',lambda d:all(voice(d,i)['desiredChannel']=='Team' and not voice(d,i)['automaticGrabVoice'] for i in [1,2]))
+    test('release restores merc weapon',lambda d:synced(d,1,lambda p:p['equipment']['weapon']==3 and p['equipment']['weaponReady']))
+    action(2,'voice_auto');test('team radio still works after releasing grab',lambda d:from_count(d,0,2)>spy_team_before)
+    start_grab();action(2,'wound')
+    test('nonlethal damage to captor releases merc and closes voice pair',lambda d:pair(d,False) and synced(d,2,lambda p:p['health']==90) and voice(d,1)['pairToken']==0 and voice(d,2)['pairToken']==0)
+    start_grab();action(1,'damage')
+    test('victim death releases captor and closes voice pair',lambda d:pair(d,False) and synced(d,1,lambda p:p['health']==0) and voice(d,1)['pairToken']==0 and voice(d,2)['pairToken']==0)
+    test('victim recovers for next grab',lambda d:synced(d,1,lambda p:p['health']==100),12)
+    start_grab();action(2,'recreate_pawn')
+    test('pawn recreation clears hold and preserves controller voice',lambda d:pair(d,False) and synced(d,2,lambda p:p['health']==100) and voice(d,1)['pairToken']==0 and voice(d,2)['pairToken']==0)
+    time.sleep(.8);action(0,'duel_open');time.sleep(.6);pad(2,'y')
+    test('launcher ready for taser-to-grab test',lambda d:synced(d,2,lambda p:p['equipment']['weaponReady']))
+    pad(2,'rt');test('merc tased before grab',lambda d:synced(d,1,lambda p:p['equipment']['stunned']))
+    pad(2,'y');start_grab()
+    test('tased merc remains held while stun wears off',lambda d:pair(d) and synced(d,1,lambda p:not p['equipment']['stunned']),8)
+    pad(2,'b');test('taser-grab release succeeds',lambda d:pair(d,False))
+    start_grab();time.sleep(.6);pad(2,'rt')
+    test('RT explicitly finishes held merc and clears both grab states',lambda d:pair(d,False) and synced(d,1,lambda p:p['health']==0) and voice(d,2)['pairToken']==0)
+    test('merc respawns after finished grab',lambda d:synced(d,1,lambda p:p['health']==100),12)
+    action(0,'network_lag');start_grab()
+    test('pair voice link agrees under latency and loss',lambda d:voice(d,1)['pairToken']>0 and voice(d,1)['pairToken']==voice(d,2)['pairToken'],20)
+    old=from_count(report(),1,2);action(2,'voice_grab')
+    test('grab voice decodes under simulated lag and packet loss',lambda d:from_count(d,1,2)>old,20)
+    action(2,'damage');test('captor death releases merc and closes pair voice',lambda d:pair(d,False) and synced(d,2,lambda p:p['health']==0) and voice(d,1)['pairToken']==0,20)
+    test('captor respawns with no held victim',lambda d:synced(d,2,lambda p:p['health']==100 and not p['restrained']),12)
+    action(0,'network_reset');start_grab();action(0,'expire')
+    test('round end immediately cancels grab and pair voice',lambda d:pair(d,False) and voice(d,1)['pairToken']==0 and voice(d,2)['pairToken']==0)
+    old_epoch=voice(report(),2)['epoch']
+    test('round reset advances voice epoch and removes stale streams',lambda d:all(w['phase']==1 for w in d['worlds']) and all(voice(d,i)['epoch']>old_epoch and voice(d,i)['pairToken']==0 and voice(d,i)['activeStreams']==0 for i in range(4)),15)
+    baseline=[voice(report(),i)['rawReceived'] for i in range(4)]
+    action(2,'voice_old_epoch');time.sleep(.5)
+    test('old round voice packets rejected after reset',lambda d:all(voice(d,i)['rawReceived']==baseline[i] for i in range(4)) and player(d,2)['voice']['rejected']>0)
+    # An actual remote connection close must clear the surviving peer's hold.
+    start_grab();victim_id=player(report(),1)['playerId']
+    action(2,'disconnect')
+    test('remote disconnect clears surviving merc grab and pair voice',lambda d:any(w['netMode']!=3 and len(w['pawns'])==3 and all(not p['restrained'] for p in w['pawns']) for w in d['worlds']) and any(p['playerId']==victim_id and p['local'] and p['voice']['pairToken']==0 for w in d['worlds'] for p in w['pawns']),25)
+    print(json.dumps({'passed':len(results),'total':len(results)}),flush=True)
+finally:
+    stop();start(1);action(0,'automation_off')

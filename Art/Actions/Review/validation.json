@@ -1,0 +1,115 @@
+{
+  "build": "Unreal 5.8.3 Mac Development Editor succeeded",
+  "focused_mantle": {
+    "passed": 24,
+    "checks": [
+      "solo rope mount",
+      "mantle starts from below the vent floor",
+      "full reach/pull/knee/trailing-leg timeline observed",
+      "capsule stays crouched throughout mantle",
+      "collision crouch never drops the rendered body",
+      "planted palms remain on their physical supports",
+      "right knee bears weight on lip before trailing leg enters",
+      "rendered pelvis moves continuously instead of snapping prone",
+      "solo settles into dedicated crawl idle",
+      "neutral stick does not inherit mantle exit velocity",
+      "remote rope mount",
+      "mantle starts from below the vent floor",
+      "full reach/pull/knee/trailing-leg timeline observed",
+      "capsule stays crouched throughout mantle",
+      "collision crouch never drops the rendered body",
+      "planted palms remain on their physical supports",
+      "right knee bears weight on lip before trailing leg enters",
+      "rendered pelvis moves continuously instead of snapping prone",
+      "all clients preserve mantle crouch under latency and loss",
+      "remote crawl handoff converges on every client",
+      "B interrupts mantle and clears replicated traversal",
+      "interrupted spy lands safely and remains alive",
+      "death during knee plant clears mantle on all clients",
+      "spy respawns with normal movement after mantle death"
+    ],
+    "planted_palm_max_error_cm": {
+      "solo": 0.018493651884129526,
+      "remote_owner": 0.015693799034316853
+    },
+    "network": "Four local PIE worlds; 100 ms lag and 2% packet loss"
+  },
+  "source_animation": {
+    "hand_contacts": [
+      {
+        "contact": "hand_r",
+        "start": 0.5,
+        "end": 1.75,
+        "max_error_cm": 1.8236876464849578
+      },
+      {
+        "contact": "hand_l",
+        "start": 0.5,
+        "end": 1.4,
+        "max_error_cm": 3.834660420229962e-05
+      },
+      {
+        "contact": "hand_l",
+        "start": 1.75,
+        "end": 2.2,
+        "max_error_cm": 2.4564063754370026e-05
+      },
+      {
+        "contact": "hand_r",
+        "start": 2.15,
+        "end": 3.2,
+        "max_error_cm": 0.000122305790471952
+      }
+    ],
+    "handoff": {
+      "max_position_cm": 0.0,
+      "max_rotation_degrees": 0.0
+    },
+    "supported_knee": true,
+    "ceiling_clear": true,
+    "no_initial_body_drop": true
+  },
+  "warehouse_regression": {
+    "passed_before_failure": 29,
+    "checks": [
+      "new warehouse has six ropes, four connected vent runs and one merc entrance",
+      "dense reference layout supplies over three hundred climbable crates",
+      "vent geometry fits crouched spy and blocks crouched merc",
+      "A mounts the spy onto a real rope",
+      "neutral stick holds position on rope",
+      "left stick climbs upward",
+      "left stick climbs downward",
+      "B drops and restores ordinary movement",
+      "merc can jump by rope without latching or grappling",
+      "merc lands after ordinary jump",
+      "server rejects merc traversal request",
+      "rope top automatically crouches spy into overhead vent",
+      "vent camera stays close rather than clipping through roof",
+      "spy can remount rope from vent mouth",
+      "top remount permits descent",
+      "dropping from upper rope safely exits traversal",
+      "merc throw windup uses actual animation with attached grenade in both views",
+      "grenade leaves on release beat and spends shared stock once",
+      "throw recovers to weapon-ready pose",
+      "warehouse routes replicate once on four clients",
+      "both mercs spawn behind the single entrance",
+      "merc entrance opens on approach on every client",
+      "merc respawn door permits entry into warehouse",
+      "jumping beside merc never triggers an aerial knockout",
+      "solid cover between falling spy and merc prevents knockout",
+      "spy landing from above knocks merc unconscious without killing",
+      "unconscious merc body stays visibly above floor on every client",
+      "unconscious merc cannot fire, throw or jump",
+      "knockout naturally recovers movement, body capsule and weapon"
+    ],
+    "failed": "second valid aerial landing knocks out recovered merc",
+    "observed_frame_ms": 159.42487493157387,
+    "remaining_checks": "Not reached",
+    "status": "Unresolved broader regression"
+  },
+  "preview": "Actual Unreal PIE gameplay, 64 frames, 20 FPS, 3.2 seconds",
+  "human_review_pending": [
+    "Physical-controller feel",
+    "Animation weight and appeal"
+  ]
+}

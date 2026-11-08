@@ -68,6 +68,7 @@ def check(name,fn):
     Path(__file__).resolve().parents[1].joinpath('Saved/acceptance.json').write_text(json.dumps(checks,indent=2))
 
 if __name__=='__main__':
+    stop();call(project_tool,'open_map',map_name='Prototype')
     check('project identity',lambda:call(project_tool,'identity'))
     start(1)
     check('solo practice and skeletal character',lambda:wait_for(lambda d:len(d['worlds'])==1 and server(d)['practice'] and all(p['mesh'] for p in server(d)['pawns'])))
@@ -194,9 +195,11 @@ if __name__=='__main__':
     time.sleep(.3);pad(1,'rt');time.sleep(.3);pad(1,'rt')
     check('three merc shots down spy',lambda:wait_for(lambda d:synced(d,2,lambda p:p['health']==0)))
     check('combat victim respawns',lambda:wait_for(lambda d:synced(d,2,lambda p:p['health']==100),12))
-    action(0,'takedown_front');time.sleep(1);pad(2,'rt');time.sleep(.4)
+    action(0,'takedown_front');time.sleep(1);pad(2,'x');time.sleep(.4)
     check('front takedown rejected',lambda:wait_for(lambda d:synced(d,1,lambda p:p['health']==100)))
-    action(0,'takedown_rear');time.sleep(1);pad(2,'rt')
+    action(0,'takedown_rear');time.sleep(1);pad(2,'x')
+    check('rear controller action holds merc alive',lambda:wait_for(lambda d:synced(d,1,lambda p:p['health']==100 and p['restrained'])))
+    time.sleep(.6);pad(2,'rt')
     check('rear controller takedown succeeds',lambda:wait_for(lambda d:synced(d,1,lambda p:p['health']==0)))
     check('merc respawns after takedown',lambda:wait_for(lambda d:synced(d,1,lambda p:p['health']==100),12))
     action(2,'place_terminal');time.sleep(1);action(2,'pad_x_down')

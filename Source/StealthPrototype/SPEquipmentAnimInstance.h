@@ -11,6 +11,11 @@ class STEALTHPROTOTYPE_API USPEquipmentAnimInstance : public UAnimInstance
 public:
     UPROPERTY(Transient) TObjectPtr<UAnimSequence> Locomotion;
     UPROPERTY(Transient) TObjectPtr<UAnimSequence> Equipment;
+    UPROPERTY(Transient) TObjectPtr<UAnimSequence> Throw;
+    float ThrowWeight=0;
+    float ThrowTime=0;
+    bool bExplicitLocomotion=false;
+    float ExplicitLocomotionTime=0;
     float LocomotionRate=1.f;
     bool bLoopLocomotion=true;
     float EquipmentWeight=0.f;

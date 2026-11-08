@@ -1,6 +1,6 @@
 # Asset provenance
 
-Original character concept sheets were generated with AI as modeling references. Step and shot WAV files were generated procedurally. Game source, map, materials and proxy geometry are included.
+Original character concept sheets were generated with AI as modeling references. Step, shot and camera WAV files were generated procedurally. Game source, map, materials and proxy geometry are included.
 
 The user supplied Meshy-generated spy, merc and carbine models. Optimized character rigs, their Blender/FBX sources, textures and the carbine import are included. Derived independent goggles, rigged weapons, first-person merc arms and authored equipment animation clips are included under Art/Equipment and Content/Characters/Equipment. Raw high-poly character imports and downloads remain local. Modeling reference documents and PNGs were generated with AI. Verify applicable Meshy output rights for your own reuse; repository inclusion is not a separate asset license.
 

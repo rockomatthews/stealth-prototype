@@ -12,3 +12,7 @@ Generated locally with `Scripts/prepare_equipment.py` from the user's Meshy char
 Coordinates are centimeters. Character FBX skeletons reuse the existing prototype skeleton without changing its bind pose. Equipment FBX files have their own weapon skeletons. Named muzzle/grip/bolt/trigger/magazine helpers are available for future work; current animation is a short recoil rather than a complete reload system. Rebuild/import reports live under Saved/EquipmentQA and are not public build products.
 
 These are prototype meshes/poses. No project-wide asset license is granted; see ASSET_NOTES.md in the public export and PUBLICATION.md for source and Epic-content exclusions.
+
+## Camera-only merc sleeves
+
+`Scripts/build_first_person_arms.py` preserves the textured source gloves and creates original closed sleeves for the first-person perspective. The full-body merc is unchanged. Dedicated `MercEquipView` and `MercThrowView` clips share equipment/release timing with the world pose. `FirstPersonViewOffset` exposes camera framing for controller tuning. `prepare_equipment.py` calls the forearm builder; both equipment and warehouse importers preserve the sleeve material slot.

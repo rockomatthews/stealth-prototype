@@ -58,6 +58,7 @@ for mesh,mat in [(spy,spy_mat),(carbine,carbine_mat),(launcher,launcher_mat),(ar
  for i,slot in enumerate(slots):
   name=str(slot.get_editor_property('imported_material_slot_name')).lower()
   selected=mat
+  if mesh==arms and 'fpsleeve' in name:selected=material(DEST+'/M_FPSleeve',(.018,.028,.05),0,.9)
   if mesh==spy:
    if 'fabricrepair' in name:selected=unreal.load_asset('/Game/Prototype/M_Gear')
    elif 'eyewhite' in name:selected=eye_white

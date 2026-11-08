@@ -155,16 +155,8 @@ tri=sum(len(f.vertices)-2 for f in carbine.data.polygons);dec=carbine.modifiers.
 for v in carbine.data.vertices:v.co=Vector((18-v.co.x,-v.co.y,v.co.z-8))
 carbine.name='SK_Carbine'
 make_rig([carbine],'Carbine',(58,0,8));report['carbine_triangles']=sum(len(f.vertices)-2 for f in carbine.data.polygons)
-# First-person arms share the merc's authored skinning and animation skeleton.
-bpy.ops.wm.open_mainfile(filepath=str(P/'Art/RiggedCharacters/Merc_rigged.blend'))
-scene=bpy.context.scene;arms=next(o for o in scene.objects if o.type=='MESH');rig=next(o for o in scene.objects if o.type=='ARMATURE')
-arm_bones={b.name for b in rig.data.bones if b.name.startswith(('upperarm_','lowerarm_','hand_','index_','middle_','ring_','pinky_','thumb_'))}
-indices={g.index for g in arms.vertex_groups if g.name in arm_bones}
-keep={v.index for v in arms.data.vertices if sum(g.weight for g in v.groups if g.group in indices)>.55}
-bm=bmesh.new();bm.from_mesh(arms.data);bm.verts.ensure_lookup_table()
-faces=[f for f in bm.faces if sum(v.index in keep for v in f.verts)<len(f.verts)]
-bmesh.ops.delete(bm,geom=faces,context='FACES');bmesh.ops.delete(bm,geom=[v for v in bm.verts if not v.link_faces],context='VERTS')
-bm.to_mesh(arms.data);bm.free();arms.name='SK_MercArms'
-export('MercArms',[rig,arms]);bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'MercArms.blend'))
-report['merc_arm_triangles']=sum(len(f.vertices)-2 for f in arms.data.polygons)
+# Build the camera-only forearms without retaining torso influences.
+arm_script=P/'Scripts/build_first_person_arms.py'
+exec(compile(arm_script.read_text(),str(arm_script),'exec'),{'__file__':str(arm_script),'__name__':'__main__'})
+report['merc_arm_triangles']=json.loads((OUT/'first-person-arms-build.json').read_text())['triangles']
 (OUT/'equipment_build_report.json').write_text(json.dumps(report,indent=2));print('EQUIPMENT_BUILT',json.dumps(report))

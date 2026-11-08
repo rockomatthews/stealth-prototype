@@ -1,0 +1,533 @@
+{
+  "date": "2026-11-07",
+  "build": "Unreal 5.8.3 Mac Development Editor succeeded",
+  "focused": {
+    "passed": 73,
+    "checks": [
+      {
+        "name": "four-client warehouse active",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "60 cap near miss rejected",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "60 cap solid cover blocks knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "60 cap first drop",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            33.61087664961815,
+            41.22624918818474
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "60 cap repeated drop after recovery",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            30.363168567419052,
+            36.889709532260895
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "60 cap fast drop",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            33.00770744681358,
+            36.945998668670654
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "30 cap near miss rejected",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "30 cap solid cover blocks knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "30 cap first drop",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            37.10983321070671,
+            48.02962392568588
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "30 cap repeated drop after recovery",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            33.33345800638199,
+            53.4655824303627
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "30 cap fast drop",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            36.91141679883003,
+            57.21450224518776
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "15 cap near miss rejected",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "15 cap solid cover blocks knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "15 cap first drop",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            66.66675209999084,
+            66.67225062847137
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "15 cap repeated drop after recovery",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            66.66674837470055,
+            66.66837260127068
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "15 cap fast drop",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            66.66683033108711,
+            66.68029353022575
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "6 cap near miss rejected",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "6 cap solid cover blocks knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "6 cap first drop",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            166.66670888662338,
+            166.6671670973301
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "6 cap repeated drop after recovery",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            166.66679456830025,
+            166.66995733976364
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "6 cap fast drop",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            166.68962687253952,
+            166.9466644525528
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "6 cap lag loss drop",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            166.66670888662338,
+            166.66679084300995
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "6 cap lag loss repeated drop",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            166.66683554649353,
+            166.66924953460693
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "host spy drop",
+        "passed": true,
+        "observed": {
+          "new_knockouts": 1,
+          "frame_ms": [
+            33.333417028188705,
+            48.86862635612488
+          ]
+        }
+      },
+      {
+        "name": "knockout collision/body replicates above floor",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "one collision awards exactly one knockout",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "merc recovers capsule, weapon and controls",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "final remote drop for interruption",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "unconscious controller cannot shoot throw or jump",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "death clears knockout on every client",
+        "passed": true,
+        "observed": true
+      },
+      {
+        "name": "respawn restores standing merc and supplies",
+        "passed": true,
+        "observed": true
+      }
+    ],
+    "observed_frame_ms": {
+      "min": 30.363168567419052,
+      "max": 166.9466644525528
+    },
+    "requested_caps": [
+      60,
+      30,
+      15,
+      6
+    ],
+    "note": "Caps are upper bounds; measured frame times are recorded. Local Mac PIE is not Xbox hardware validation."
+  },
+  "warehouse": {
+    "passed": 46,
+    "checks": [
+      "new warehouse has six ropes, four connected vent runs and one merc entrance",
+      "dense reference layout supplies over three hundred climbable crates",
+      "vent geometry fits crouched spy and blocks crouched merc",
+      "A mounts the spy onto a real rope",
+      "neutral stick holds position on rope",
+      "left stick climbs upward",
+      "left stick climbs downward",
+      "B drops and restores ordinary movement",
+      "merc can jump by rope without latching or grappling",
+      "merc lands after ordinary jump",
+      "server rejects merc traversal request",
+      "rope top automatically crouches spy into overhead vent",
+      "vent camera stays close rather than clipping through roof",
+      "spy can remount rope from vent mouth",
+      "top remount permits descent",
+      "dropping from upper rope safely exits traversal",
+      "merc throw windup uses actual animation with attached grenade in both views",
+      "grenade leaves on release beat and spends shared stock once",
+      "throw recovers to weapon-ready pose",
+      "warehouse routes replicate once on four clients",
+      "both mercs spawn behind the single entrance",
+      "merc entrance opens on approach on every client",
+      "merc respawn door permits entry into warehouse",
+      "jumping beside merc never triggers an aerial knockout",
+      "solid cover between falling spy and merc prevents knockout",
+      "spy landing from above knocks merc unconscious without killing",
+      "unconscious merc body stays visibly above floor on every client",
+      "unconscious merc cannot fire, throw or jump",
+      "knockout naturally recovers movement, body capsule and weapon",
+      "second valid aerial landing knocks out recovered merc",
+      "death during knockout clears unconscious state",
+      "knocked-out merc respawns standing with restored controls and supplies",
+      "remote spy mounts rope on all clients",
+      "remote climb and vent entry converge under lag and packet loss",
+      "spy remains crouched in vent",
+      "merc gunfire passes through vent sheet metal and damages spy",
+      "dead vent spy respawns with no stuck traversal",
+      "death during rope climb clears movement state on all clients",
+      "climbing spy respawns normally",
+      "remote throw animates owner arms and replicated world body before release",
+      "remote prop remains attached to both animated hand sockets",
+      "remote throw releases one replicated grenade",
+      "remote throw restores both weapon views",
+      "thrown grenade expires before next fixture",
+      "merc sound-direction cue comes from audible emitted spy steps",
+      "merc death respawns behind same entrance"
+    ]
+  },
+  "prior_failure": "second valid aerial landing knocks out recovered merc",
+  "status": "Prior failure passed in the unchanged warehouse suite",
+  "limits": [
+    "Mac PIE, not an Xbox hardware run",
+    "60 FPS cap was an upper bound; observed timing is recorded",
+    "Physical controller and moving/crouched-target console tuning pending"
+  ]
+}

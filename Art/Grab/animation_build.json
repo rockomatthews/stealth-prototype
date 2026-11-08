@@ -1,0 +1,42 @@
+{
+  "SpyHold": {
+    "seconds": 0.1,
+    "frames": 4,
+    "bones": 88
+  },
+  "MercHold": {
+    "seconds": 0.1,
+    "frames": 4,
+    "bones": 88
+  },
+  "SpySnap": {
+    "seconds": 0.85,
+    "frames": 27,
+    "bones": 88
+  },
+  "MercSnap": {
+    "seconds": 0.85,
+    "frames": 27,
+    "bones": 88
+  },
+  "SpyKick": {
+    "seconds": 3.1,
+    "frames": 94,
+    "bones": 88
+  },
+  "MercKick": {
+    "seconds": 3.1,
+    "frames": 94,
+    "bones": 88
+  },
+  "SpyGrenade": {
+    "seconds": 3.8,
+    "frames": 115,
+    "bones": 88
+  },
+  "MercGrenade": {
+    "seconds": 3.8,
+    "frames": 115,
+    "bones": 88
+  }
+}

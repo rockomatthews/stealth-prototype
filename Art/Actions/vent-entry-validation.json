@@ -1,0 +1,35 @@
+{
+  "hand_contacts": [
+    {
+      "contact": "hand_r",
+      "start": 0.5,
+      "end": 1.75,
+      "max_error_cm": 1.8236876464849578
+    },
+    {
+      "contact": "hand_l",
+      "start": 0.5,
+      "end": 1.4,
+      "max_error_cm": 3.834660420229962e-05
+    },
+    {
+      "contact": "hand_l",
+      "start": 1.75,
+      "end": 2.2,
+      "max_error_cm": 2.4564063754370026e-05
+    },
+    {
+      "contact": "hand_r",
+      "start": 2.15,
+      "end": 3.2,
+      "max_error_cm": 0.000122305790471952
+    }
+  ],
+  "handoff": {
+    "max_position_cm": 0.0,
+    "max_rotation_degrees": 0.0
+  },
+  "supported_knee": true,
+  "ceiling_clear": true,
+  "no_initial_body_drop": true
+}

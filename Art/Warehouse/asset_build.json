@@ -1,0 +1,82 @@
+{
+  "SM_Crate": {
+    "triangles": 2912,
+    "dimensions_cm": [
+      107.0,
+      107.08000183105469,
+      100.0
+    ]
+  },
+  "SM_Pallet": {
+    "triangles": 344,
+    "dimensions_cm": [
+      97.80000305175781,
+      100.0,
+      12.0
+    ]
+  },
+  "SM_Barrel": {
+    "triangles": 1288,
+    "dimensions_cm": [
+      100.0,
+      100.0,
+      98.5
+    ]
+  },
+  "SM_Column": {
+    "triangles": 48,
+    "dimensions_cm": [
+      32.0,
+      32.0,
+      100.0
+    ]
+  },
+  "SM_Beam": {
+    "triangles": 36,
+    "dimensions_cm": [
+      100.0,
+      16.0,
+      14.0
+    ]
+  },
+  "SM_Grate": {
+    "triangles": 216,
+    "dimensions_cm": [
+      100.0,
+      100.0,
+      8.0
+    ]
+  },
+  "SM_Rail": {
+    "triangles": 140,
+    "dimensions_cm": [
+      100.39999389648438,
+      4.400000095367432,
+      110.0
+    ]
+  },
+  "SM_Lamp": {
+    "triangles": 180,
+    "dimensions_cm": [
+      46.0,
+      46.0,
+      33.0
+    ]
+  },
+  "SM_Rope": {
+    "triangles": 2880,
+    "dimensions_cm": [
+      3.6945204734802246,
+      3.6972784996032715,
+      100.34322357177734
+    ]
+  },
+  "SM_Canvas": {
+    "triangles": 512,
+    "dimensions_cm": [
+      120.0,
+      120.0,
+      49.5132942199707
+    ]
+  }
+}

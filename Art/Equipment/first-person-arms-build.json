@@ -1,0 +1,8 @@
+{
+  "triangles": 3152,
+  "vertices": 1584,
+  "source": "Art/RiggedCharacters/Merc_rigged.blend",
+  "forearms_only": true,
+  "closed_procedural_sleeves": true,
+  "arm_weights_normalized": true
+}
