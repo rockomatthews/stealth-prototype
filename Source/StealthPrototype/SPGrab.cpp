@@ -1,4 +1,5 @@
 #include "Prototype.h"
+#include "SPHandContacts.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
@@ -11,10 +12,12 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundBase.h"
+#include "Engine/StaticMesh.h"
+#include "SPBlast.h"
 
 bool ASPCharacter::TryBeginGrab()
 {
-    if (!HasAuthority() || !IsSpy() || !IsRoundActive() || IsRestrained() || IsStunned() || Traversal()->IsTraversing() || ServerViewedCamera.IsValid() || WeaponMode()!=ESPWeapon::Hands || !GetCharacterMovement()->IsMovingOnGround()) return false;
+    if (!HasAuthority() || !IsSpy() || !IsRoundActive() || BlocksGrabCombat() || IsStunned() || Traversal()->IsTraversing() || ServerViewedCamera.IsValid() || WeaponMode()!=ESPWeapon::Hands || !GetCharacterMovement()->IsMovingOnGround()) return false;
     const FVector Direction=FRotator(0,GetBaseAimRotation().Yaw,0).Vector();
     const FVector Start=GetActorLocation()+FVector(0,0,35);
     FHitResult Hit;FCollisionQueryParams Query(SCENE_QUERY_STAT(RearGrab),false,this);
@@ -29,7 +32,7 @@ bool ASPCharacter::TryBeginGrab()
         GetCharacterMovement()->bWantsToCrouch=false;GetCharacterMovement()->UnCrouch();
         if (bIsCrouched) return false; // Insufficient headroom: do not freeze below the floor.
     }
-    const float Gap=GetCapsuleComponent()->GetScaledCapsuleRadius()+Target->GetCapsuleComponent()->GetScaledCapsuleRadius()-8.f;
+    const float Gap=40.f;
     const FVector Hold=Target->GetActorLocation()-Target->GetActorForwardVector()*Gap;
     Query.AddIgnoredActor(Target);
     FHitResult Block;
@@ -41,7 +44,7 @@ bool ASPCharacter::TryBeginGrab()
     Target->Grab.Partner=this;Target->Grab.bCaptor=false;Target->Grab.Token=Token;Target->Grab.StartedAt=Grab.StartedAt;
     WeaponBeforeGrab=WeaponMode();Target->WeaponBeforeGrab=Target->WeaponMode();
     if (WeaponMode()!=ESPWeapon::Hands) SetWeapon(ESPWeapon::Hands);
-    if (Target->WeaponMode()!=ESPWeapon::Hands) Target->SetWeapon(ESPWeapon::Hands);
+    if (Target->WeaponMode()!=ESPWeapon::Carbine) Target->SetWeapon(ESPWeapon::Carbine);
     SetActorLocation(Hold,false,nullptr,ETeleportType::TeleportPhysics);SetActorRotation(Target->GetActorRotation());
     SafeGrabPosition=GetActorLocation();SafeGrabFacing=GetActorRotation();
     OnRep_Grab(Previous);Target->OnRep_Grab(TargetPrevious);ForceNetUpdate();Target->ForceNetUpdate();
@@ -71,11 +74,17 @@ void ASPCharacter::OnRep_Grab(FSPGrabState Previous)
 {
     bAiming=false;bInteractHeld=false;ResetCameraView();
     if (!IsRestrained()) {HeldPoseToken=0;FinishPressedAt=-1;}
-    if (Previous.Partner && Previous.Partner!=Grab.Partner) GetCapsuleComponent()->IgnoreActorWhenMoving(Previous.Partner,false);
+    if (Previous.Partner && Previous.Partner!=Grab.Partner)
+    {
+        // Only the authoritative five-second completion sets ChokeExitAt.
+        // Inferring success from elapsed time here incorrectly played a dismount
+        // when rescue damage interrupted the choke immediately before completion.
+        ChokeExitPartner=Previous.Partner; // Ignore only until the capsules separate.
+    }
     if (IsRestrained())
     {
         GetCapsuleComponent()->IgnoreActorWhenMoving(Grab.Partner,true);
-        if (IsCaptor() && !IsFinishing()) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+        if ((IsCaptor() && !IsFinishing()) || IsChokeVictim()) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
         else {GetCharacterMovement()->StopMovementImmediately();GetCharacterMovement()->DisableMovement();}
     }
     else if (Previous.Token && Health>0) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
@@ -88,11 +97,11 @@ void ASPCharacter::EndGrab()
     if (!HasAuthority() || !IsRestrained()) return;
     FinishPressedAt=-1;
     ASPCharacter* Partner=Grab.Partner;const uint32 Token=Grab.Token;
-    const FSPGrabState Previous=Grab;Grab=FSPGrabState();OnRep_Grab(Previous);if (Health>0 && WeaponMode()!=WeaponBeforeGrab) SetWeapon(WeaponBeforeGrab);ForceNetUpdate();
+    const FSPGrabState Previous=Grab;Grab=FSPGrabState();OnRep_Grab(Previous);if (Previous.Finisher!=ESPFinisher::BackChoke && Health>0 && WeaponMode()!=WeaponBeforeGrab) SetWeapon(WeaponBeforeGrab);ForceNetUpdate();
     if (ASPPlayerController* PC=Cast<ASPPlayerController>(Controller)) PC->ClientVoicePair(-1,0);
     if (IsValid(Partner) && Partner->Grab.Token==Token && Partner->Grab.Partner==this)
     {
-        const FSPGrabState Other=Partner->Grab;Partner->Grab=FSPGrabState();Partner->OnRep_Grab(Other);if (Partner->Health>0 && Partner->WeaponMode()!=Partner->WeaponBeforeGrab) Partner->SetWeapon(Partner->WeaponBeforeGrab);Partner->ForceNetUpdate();
+        const FSPGrabState Other=Partner->Grab;Partner->Grab=FSPGrabState();Partner->OnRep_Grab(Other);if (Other.Finisher!=ESPFinisher::BackChoke && Partner->Health>0 && Partner->WeaponMode()!=Partner->WeaponBeforeGrab) Partner->SetWeapon(Partner->WeaponBeforeGrab);Partner->ForceNetUpdate();
         if (ASPPlayerController* PC=Cast<ASPPlayerController>(Partner->Controller)) PC->ClientVoicePair(-1,0);
     }
 }
@@ -120,35 +129,42 @@ void ASPCharacter::BeginFinisher(bool Extended)
     ValidateGrab();
     if (!IsCaptor() || IsFinishing() || !IsRoundActive() || IsStunned()) return;
     ASPCharacter* Victim=Grab.Partner;
-    const ESPFinisher Kind=!Extended?ESPFinisher::NeckSnap:(Victim->MercGrenades>0?ESPFinisher::Grenade:ESPFinisher::Kick);
-    // Reserve a clear capsule corridor before committing to the shove/kneel.
+    const ESPFinisher Kind=!Extended?ESPFinisher::NeckSnap:(Victim->MercGrenades>0?ESPFinisher::Grenade:ESPFinisher::BackChoke);
+    // Reserve a clear capsule corridor before committing to the shove or mount.
     FCollisionQueryParams Q(SCENE_QUERY_STAT(FinishClearance),false,this);Q.AddIgnoredActor(Victim);
     FHitResult Hit;
-    const float Travel=Kind==ESPFinisher::Grenade?145.f:Kind==ESPFinisher::Kick?35.f:0.f;
+    const float Travel=Kind==ESPFinisher::Grenade?145.f:0.f;
     const FVector End=Victim->GetActorLocation()+GetActorForwardVector()*Travel;
-    if (GetWorld()->SweepSingleByChannel(Hit,Victim->GetActorLocation(),End,FQuat::Identity,ECC_Pawn,FCollisionShape::MakeCapsule(Victim->GetCapsuleComponent()->GetScaledCapsuleRadius()+(Kind==ESPFinisher::Kick?35.f:0.f),Victim->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()),Q))
+    if (GetWorld()->SweepSingleByChannel(Hit,Victim->GetActorLocation(),End,FQuat::Identity,ECC_Pawn,FCollisionShape::MakeCapsule(Victim->GetCapsuleComponent()->GetScaledCapsuleRadius(),Victim->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()),Q))
     {ClientFeedback(TEXT("Not enough space for this finisher"));FinishPressedAt=-1;return;}
     FHitResult Floor;
     if (!GetWorld()->LineTraceSingleByChannel(Floor,End,End-FVector(0,0,130),ECC_Pawn,Q) || Floor.ImpactNormal.Z<.7f)
     {ClientFeedback(TEXT("Finisher needs solid ground"));FinishPressedAt=-1;return;}
-    if (Kind==ESPFinisher::Kick && GetWorld()->SweepSingleByChannel(Hit,GetActorLocation(),GetActorLocation()+GetActorForwardVector()*65.f,FQuat::Identity,ECC_Pawn,GetCapsuleComponent()->GetCollisionShape(),Q))
-    {ClientFeedback(TEXT("No room to step into the kick"));FinishPressedAt=-1;return;}
     FinishPressedAt=-1;bFinishSpentGrenade=false;FinishOrigin=GetActorLocation();
     Grab.Finisher=Victim->Grab.Finisher=Kind;Grab.FinishStartedAt=Victim->Grab.FinishStartedAt=ServerNow();
+    if (Kind==ESPFinisher::BackChoke && Victim->WeaponMode()!=ESPWeapon::Carbine) Victim->SetWeapon(ESPWeapon::Carbine);
     OnRep_Grab(Grab);Victim->OnRep_Grab(Victim->Grab);ForceNetUpdate();Victim->ForceNetUpdate();
-    ClientFeedback(Kind==ESPFinisher::Grenade?TEXT("GRENADE FINISH | Exposed until detonation"):Kind==ESPFinisher::Kick?TEXT("KICK FINISH | Exposed until impact"):TEXT("NECK SNAP"));
+    ClientFeedback(Kind==ESPFinisher::Grenade?TEXT("GRENADE PLANT | Shove then move away from the live grenade"):Kind==ESPFinisher::BackChoke?TEXT("BACK CHOKE | Hold on for five seconds"):TEXT("NECK SNAP"));
 }
 void ASPPlayerController::ClientHeldPose_Implementation(FVector Position,FRotator Facing,uint32 Token)
 {
     if (ASPCharacter* P=Cast<ASPCharacter>(GetPawn()))
-        if (P->Grab.Token==Token && (!P->IsCaptor() || P->IsFinishing()))
+        if (P->Grab.Token==Token && P->BlocksGrabInput())
         {P->HeldTarget=Position;P->HeldFacing=Facing;P->HeldPoseToken=Token;}
 }
 void ASPCharacter::UpdateGrab(float Delta)
 {
+    if (ChokeExitPartner.IsValid() && !IsChokeExiting())
+    {
+        ASPCharacter* Other=ChokeExitPartner.Get();
+        const bool Separated=FVector::Dist2D(GetActorLocation(),Other->GetActorLocation())>GetCapsuleComponent()->GetScaledCapsuleRadius()+Other->GetCapsuleComponent()->GetScaledCapsuleRadius()+2.f
+            || FMath::Abs(GetActorLocation().Z-Other->GetActorLocation().Z)>GetCapsuleComponent()->GetScaledCapsuleHalfHeight()+Other->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+        if (Separated || Health<=0 || Other->Health<=0)
+        {GetCapsuleComponent()->IgnoreActorWhenMoving(Other,false);ChokeExitPartner.Reset();}
+    }
     if (!HasAuthority())
     {
-        if (IsLocallyControlled() && IsRestrained() && (!IsCaptor() || IsFinishing()) && HeldPoseToken==Grab.Token)
+        if (IsLocallyControlled() && IsRestrained() && BlocksGrabInput() && HeldPoseToken==Grab.Token)
         {
             SetActorLocationAndRotation(FMath::VInterpTo(GetActorLocation(),HeldTarget,Delta,25.f),FMath::RInterpTo(GetActorRotation(),HeldFacing,Delta,20.f),false,nullptr,ETeleportType::TeleportPhysics);
             if (Controller) Controller->SetControlRotation(GetActorRotation());
@@ -159,19 +175,42 @@ void ASPCharacter::UpdateGrab(float Delta)
     ASPCharacter* Victim=Grab.Partner;
     if (!IsValid(Victim)) return;
     if (FinishPressedAt>=0 && ServerNow()-FinishPressedAt>=FinishHoldSeconds) BeginFinisher(true);
-    const float Gap=GetCapsuleComponent()->GetScaledCapsuleRadius()+Victim->GetCapsuleComponent()->GetScaledCapsuleRadius()-8.f;
+    if (Grab.Finisher==ESPFinisher::BackChoke)
+    {
+        // The merc remains an ordinary predicted CharacterMovement pawn. Only
+        // the rider follows; never overwrite the merc owner's aim or movement.
+        const float T=ServerNow()-Grab.FinishStartedAt;
+        const FRotator Facing(0,Victim->GetActorRotation().Yaw,0);
+        const float Gap=40.f;
+        const FVector Desired=Victim->GetActorLocation()-Facing.Vector()*Gap;
+        FHitResult Hit;SetActorLocationAndRotation(Desired,Facing,true,&Hit);
+        if (Hit.bBlockingHit) {EndGrab();return;}
+        HeldPoseClock+=Delta;
+        if (HeldPoseClock>=.05f)
+        {
+            HeldPoseClock=0;ForceNetUpdate();
+            if (ASPPlayerController* PC=Cast<ASPPlayerController>(Controller)) PC->ClientHeldPose(Desired,Facing,Grab.Token);
+        }
+        if (T>=5.f)
+        {
+            ChokeExitAt=ServerNow();ForceNetUpdate();EndGrab();
+            Victim->ChokeDeathAt=ServerNow();
+            FDamageEvent Event;Victim->TakeDamage(100.f,Event,Controller,this);Victim->ForceNetUpdate();
+            ClientFeedback(TEXT("STRANGULATION"));Victim->ClientFeedback(TEXT("STRANGLED"));
+        }
+        return;
+    }
+    const float Gap=40.f;
     FRotator Facing(0,IsFinishing()?SafeGrabFacing.Yaw:GetBaseAimRotation().Yaw,0);
     const float Elapsed=ServerNow()-Grab.FinishStartedAt;
     FVector Desired=GetActorLocation()+Facing.Vector()*Gap;
     if (IsFinishing())
     {
         FVector SpyPosition=FinishOrigin;
-        if (Grab.Finisher==ESPFinisher::Kick) SpyPosition+=Facing.Vector()*65.f*FMath::SmoothStep(0.f,1.f,FMath::Clamp((Elapsed-1.25f)/.55f,0.f,1.f));
         FHitResult SpyHit;SetActorLocation(SpyPosition,true,&SpyHit);
         if (SpyHit.bBlockingHit) {EndGrab();return;} // Static obstruction or another player can interrupt the step.
         Desired=FinishOrigin+Facing.Vector()*Gap;
-        if (Grab.Finisher==ESPFinisher::Grenade) Desired+=Facing.Vector()*145.f*FMath::Clamp((Elapsed-2.2f)/.8f,0.f,1.f);
-        if (Grab.Finisher==ESPFinisher::Kick) Desired+=Facing.Vector()*35.f*FMath::Clamp((Elapsed-.65f)/.35f,0.f,1.f);
+        if (Grab.Finisher==ESPFinisher::Grenade) Desired+=Facing.Vector()*145.f*FMath::Clamp((Elapsed-2.2f)/.6f,0.f,1.f);
     }
     FCollisionQueryParams Q(SCENE_QUERY_STAT(DragClearance),false,this);Q.AddIgnoredActor(Victim);
     FHitResult Hit,Floor;
@@ -195,16 +234,16 @@ void ASPCharacter::UpdateGrab(float Delta)
         if (IsFinishing()) if (ASPPlayerController* PC=Cast<ASPPlayerController>(Controller)) PC->ClientHeldPose(GetActorLocation(),Facing,Grab.Token);
     }
     if (!IsFinishing()) return;
-    if (Grab.Finisher==ESPFinisher::Grenade && Elapsed>=.9f && !bFinishSpentGrenade)
+    if (Grab.Finisher==ESPFinisher::Grenade && Elapsed>=.55f && !bFinishSpentGrenade)
     {
         if (Victim->MercGrenades<=0) {EndGrab();return;}
         FActorSpawnParameters Params;Params.Owner=this;Params.Instigator=this;Params.SpawnCollisionHandlingOverride=ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
         ASPGrabGrenade* G=GetWorld()->SpawnActor<ASPGrabGrenade>(GetActorLocation(),Facing,Params);
         if (!G) {EndGrab();return;}
         --Victim->MercGrenades;Victim->ForceNetUpdate();bFinishSpentGrenade=true;
-        G->Victim=Victim;G->Captor=this;G->ArmedAt=ServerNow();G->Epoch=GetWorld()->GetGameState<ASPGameState>()->VoiceEpoch;G->ForceNetUpdate();
+        G->Victim=Victim;G->Captor=this;G->ArmedAt=Grab.FinishStartedAt+1.05f;G->Epoch=GetWorld()->GetGameState<ASPGameState>()->VoiceEpoch;G->ForceNetUpdate();
     }
-    const float Duration=Grab.Finisher==ESPFinisher::NeckSnap?.85f:Grab.Finisher==ESPFinisher::Kick?3.1f:3.8f;
+    const float Duration=Grab.Finisher==ESPFinisher::NeckSnap?.85f:2.8f;
     if (Elapsed>=Duration)
     {
         const bool Explosive=Grab.Finisher==ESPFinisher::Grenade;
@@ -216,11 +255,11 @@ void ASPCharacter::ToggleVoiceMute() {if (ASPPlayerController* PC=Cast<ASPPlayer
 
 void ASPCharacter::ThrowMercGrenade()
 {
-    if (!HasAuthority() || IsSpy() || !IsRoundActive() || !Controller || IsRestrained() || IsStunned() || Traversal()->IsTraversing() || IsThrowingGrenade()) return;
+    if (!HasAuthority() || IsSpy() || !IsRoundActive() || !Controller || BlocksGrabCombat() || IsStunned() || Traversal()->IsTraversing() || IsThrowingGrenade()) return;
     if (MercGrenades<=0) {ClientFeedback(TEXT("Grenades empty"));return;}
     if (ServerNow()-LastGrenadeThrowAt<GrenadeThrowCooldown) return;
     FVector Eye;FRotator Aim;GetActorEyesViewPoint(Eye,Aim);FHitResult Hit;
-    FCollisionQueryParams Q(SCENE_QUERY_STAT(ThrowWindupClearance),false,this);
+    FCollisionQueryParams Q(SCENE_QUERY_STAT(ThrowWindupClearance),false,this);if (IsChokeVictim()) Q.AddIgnoredActor(Grab.Partner);
     const FVector Release=Eye+Aim.Vector()*55.f+FRotationMatrix(Aim).GetUnitAxis(EAxis::Y)*12.f-FVector(0,0,12.f);
     if (GetWorld()->SweepSingleByChannel(Hit,Eye,Release,FQuat::Identity,ECC_Visibility,FCollisionShape::MakeSphere(5.f),Q)) {ClientFeedback(TEXT("Move away from cover to throw"));return;}
     ThrowStartedAt=LastGrenadeThrowAt=ServerNow();bThrowPending=true;bAiming=false;ForceNetUpdate();
@@ -228,17 +267,17 @@ void ASPCharacter::ThrowMercGrenade()
 void ASPCharacter::UpdateGrenadeThrow()
 {
     if (!HasAuthority() || !bThrowPending) return;
-    if (IsSpy() || !IsRoundActive() || IsRestrained() || IsStunned() || Traversal()->IsTraversing())
+    if (IsSpy() || !IsRoundActive() || BlocksGrabCombat() || IsStunned() || Traversal()->IsTraversing())
     {bThrowPending=false;ThrowStartedAt=-10;ForceNetUpdate();return;}
     if (ServerNow()-ThrowStartedAt>=.42f) {bThrowPending=false;ReleaseMercGrenade();}
 }
 void ASPCharacter::ReleaseMercGrenade()
 {
-    if (!HasAuthority() || IsSpy() || !IsRoundActive() || !Controller || IsRestrained() || IsStunned() || Traversal()->IsTraversing()) return;
+    if (!HasAuthority() || IsSpy() || !IsRoundActive() || !Controller || BlocksGrabCombat() || IsStunned() || Traversal()->IsTraversing()) return;
     if (MercGrenades<=0) {ClientFeedback(TEXT("Grenades empty"));return;}
     FVector Eye;FRotator Aim;GetActorEyesViewPoint(Eye,Aim);
     const FVector Release=Eye+Aim.Vector()*55.f+FRotationMatrix(Aim).GetUnitAxis(EAxis::Y)*12.f-FVector(0,0,12.f);
-    FCollisionQueryParams Query(SCENE_QUERY_STAT(GrenadeRelease),false,this);FHitResult Hit;
+    FCollisionQueryParams Query(SCENE_QUERY_STAT(GrenadeRelease),false,this);if (IsChokeVictim()) Query.AddIgnoredActor(Grab.Partner);FHitResult Hit;
     if (GetWorld()->SweepSingleByChannel(Hit,Eye,Release,FQuat::Identity,ECC_Visibility,FCollisionShape::MakeSphere(5.f),Query) ||
         GetWorld()->SweepSingleByChannel(Hit,GetActorLocation()+FVector(0,0,30),Release,FQuat::Identity,ECC_Visibility,FCollisionShape::MakeSphere(5.f),Query))
     {ClientFeedback(TEXT("Move away from cover to throw"));return;}
@@ -246,6 +285,7 @@ void ASPCharacter::ReleaseMercGrenade()
     ASPGrabGrenade* Grenade=GetWorld()->SpawnActor<ASPGrabGrenade>(Release,Aim,Params);
     if (!Grenade) return;
     Grenade->Captor=this;Grenade->ArmedAt=ServerNow();Grenade->Epoch=GetWorld()->GetGameState<ASPGameState>()->VoiceEpoch;
+    if (IsChokeVictim()) Grenade->Collision->IgnoreActorWhenMoving(Grab.Partner,true);
     Grenade->Launch(Aim.Vector()*FMath::Clamp(GrenadeThrowSpeed,100.f,2000.f)+FVector(0,0,180.f)+GetVelocity()*.3f);
     --MercGrenades;LastGrenadeThrowAt=ServerNow();ForceNetUpdate();Grenade->ForceNetUpdate();
     ClientFeedback(FString::Printf(TEXT("Grenade thrown | %d remaining"),MercGrenades));
@@ -266,6 +306,7 @@ ASPGrabGrenade::ASPGrabGrenade()
     Housing->SetStaticMesh(Sphere.Object);Housing->SetWorldScale3D(FVector(.055f,.055f,.08f));Housing->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     Lever=CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SafetyLever"));Lever->SetupAttachment(Housing);
     SafetyPin=CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SafetyPin"));SafetyPin->SetupAttachment(Housing);SafetyPin->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    SPBlast::LoadAssets(this);
     Lever->SetStaticMesh(Cube.Object);Lever->SetRelativeLocation(FVector(0,0,40));Lever->SetRelativeScale3D(FVector(.3f,.3f,.3f));Lever->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 void ASPGrabGrenade::OnBounce(const FHitResult& Impact,const FVector& Velocity) {if (HasAuthority()) ++BounceCount;}
@@ -279,6 +320,7 @@ void ASPGrabGrenade::Launch(const FVector& Velocity)
 void ASPGrabGrenade::BeginPlay()
 {
     Super::BeginPlay();
+    if (!DustMaterial) DustMaterial=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Characters/Grab/Blast/M_BlastDustSoft.M_BlastDustSoft"));
     if (UStaticMesh* Mesh=LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Characters/Grab/SM_Grenade.SM_Grenade"))) {Housing->SetStaticMesh(Mesh);Housing->SetWorldScale3D(FVector(1));Lever->SetVisibility(false);}
     SafetyPin->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Game/Characters/Grab/SM_GrenadePin.SM_GrenadePin")));
     if (UMaterialInterface* M=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Characters/Grab/M_Grenade.M_Grenade"))) Housing->SetMaterial(0,M);
@@ -287,17 +329,27 @@ void ASPGrabGrenade::Tick(float Delta)
 {
     Super::Tick(Delta);
     const ASPGameState* GS=GetWorld()->GetGameState<ASPGameState>();
-    if (!GS || !ArmedAt || bExploded) return;
+    if (HasAuthority() && GS && GS->VoiceEpoch!=Epoch) {Destroy();return;}
+    if (bExploded)
+    {UpdateBlast(Delta);return;}
+    if (!GS || !ArmedAt) return;
     const float T=GS->GetServerWorldTimeSeconds()-ArmedAt;
-    SafetyPin->SetVisibility(!bThrown && T<.45f && IsValid(Captor) && Captor->IsFinishing());
-    if (SafetyPin->IsVisible()) SafetyPin->SetWorldLocation(Captor->GetMesh()->GetSocketLocation(TEXT("hand_l")));
-    if (!bThrown && IsValid(Captor) && Captor->IsFinishing() && T>.75f) Housing->SetVisibility(false); // Now concealed inside the waistband.
-    else if (bDetached) Housing->SetVisibility(true);
     if (HasAuthority() && GS->VoiceEpoch!=Epoch) {Destroy();return;}
-    if (!bThrown && !bDetached)
+    const bool PairValid=IsValid(Captor) && IsValid(Victim) && Captor->IsFinishing()
+        && Captor->Grab.Finisher==ESPFinisher::Grenade && Captor->Grab.Partner==Victim;
+    if (HasAuthority() && !bThrown && !bPlanted && !PairValid && T<0.f) {Destroy();return;} // Pin was never pulled.
+    if (HasAuthority() && !bThrown && !bPlanted && !bDetached && PairValid && T>=.85f)
+    {bPlanted=true;ForceNetUpdate();}
+    SafetyPin->SetVisibility(!bThrown && !bPlanted && !bDetached && T<.35f && PairValid);
+    if (SafetyPin->IsVisible()) SafetyPin->SetWorldLocation(Captor->GetMesh()->GetSocketLocation(TEXT("thumb_03_l")));
+    Housing->SetVisibility(!bPlanted);
+    if (HasAuthority() && bPlanted && IsValid(Victim) && Victim->Health>0 && !PairValid && Victim->PanicUntil<ArmedAt+FuseSeconds)
+    {Victim->PanicStartedAt=GS->GetServerWorldTimeSeconds();Victim->PanicUntil=ArmedAt+FuseSeconds+.2f;Victim->GetCharacterMovement()->StopMovementImmediately();Victim->ForceNetUpdate();Victim->ClientFeedback(TEXT("LIVE GRENADE IN WAISTBAND"));}
+    if (!bThrown && bPlanted && IsValid(Victim))
+        SetActorLocation(Victim->GetMesh()->GetSocketLocation(TEXT("pelvis"))+Victim->GetActorForwardVector()*10.f-FVector(0,0,8));
+    else if (!bThrown && !bDetached)
     {
-        if (IsValid(Captor) && IsValid(Victim) && Captor->IsFinishing() && Captor->Grab.Partner==Victim)
-            SetActorLocation(T<.75f?Captor->GetMesh()->GetSocketLocation(TEXT("hand_r")):Victim->GetActorLocation()+Victim->GetActorForwardVector()*12.f+FVector(0,0,-12));
+        if (PairValid) SetActorLocation(SPHandContacts::GrenadeCenter(Captor->GetMesh()));
         else
         {
             bDetached=true;
@@ -306,26 +358,19 @@ void ASPGrabGrenade::Tick(float Delta)
              if (GetWorld()->LineTraceSingleByChannel(H,GetActorLocation(),GetActorLocation()-FVector(0,0,250),ECC_Visibility,Q)) SetActorLocation(H.ImpactPoint+FVector(0,0,5));}
         }
     }
-    if (!HasAuthority() || T<2.9f) return;
-    bExploded=true;Projectile->StopMovementImmediately();Projectile->Deactivate();Collision->SetCollisionEnabled(ECollisionEnabled::NoCollision);ForceNetUpdate();OnRep_Exploded();SetLifeSpan(.3f);
+    if (!HasAuthority() || T<FuseSeconds) return;
+    bExploded=true;Projectile->StopMovementImmediately();Projectile->Deactivate();Collision->SetCollisionEnabled(ECollisionEnabled::NoCollision);ForceNetUpdate();OnRep_Exploded();SetLifeSpan(8.f);
     TArray<TWeakObjectPtr<ASPCharacter>> Targets;
     for (TActorIterator<ASPCharacter> It(GetWorld());It;++It) if (It->Health>0 && FVector::Dist(It->GetActorLocation(),GetActorLocation())<200.f) Targets.Add(*It);
     for (const auto& Weak:Targets) if (ASPCharacter* P=Weak.Get())
     {
-        FHitResult H;FCollisionQueryParams Q(SCENE_QUERY_STAT(GrenadeDamage),false,this);Q.AddIgnoredActor(P);
+        FHitResult H;FCollisionQueryParams Q(SCENE_QUERY_STAT(GrenadeDamage),false,this);Q.AddIgnoredActor(P);if (IsValid(Victim)) Q.AddIgnoredActor(Victim);
         if (GetWorld()->LineTraceSingleByChannel(H,GetActorLocation(),P->GetActorLocation(),ECC_Visibility,Q)) continue;
         const float Distance=FVector::Dist(GetActorLocation(),P->GetActorLocation());FDamageEvent Event;
         P->TakeDamage(Distance<=110.f?100.f:60.f*(200.f-Distance)/90.f,Event,IsValid(Captor)?Captor->GetController():nullptr,this);
     }
 }
-void ASPGrabGrenade::OnRep_Exploded()
-{
-    // Short visible flash; original synthesized audio is imported with the animations.
-    Housing->SetVisibility(true);Housing->SetStaticMesh(LoadObject<UStaticMesh>(nullptr,TEXT("/Engine/BasicShapes/Sphere.Sphere")));Housing->SetWorldScale3D(FVector(1.5f));Lever->SetVisibility(false);SafetyPin->SetVisibility(false);
-    if (UMaterialInterface* M=LoadObject<UMaterialInterface>(nullptr,TEXT("/Game/Characters/Grab/M_Blast.M_Blast"))) Housing->SetMaterial(0,M);
-    if (USoundBase* Sound=LoadObject<USoundBase>(nullptr,TEXT("/Game/Characters/Grab/GrenadeBlast.GrenadeBlast"))) UGameplayStatics::PlaySoundAtLocation(this,Sound,GetActorLocation());
-}
 void ASPGrabGrenade::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);DOREPLIFETIME(ASPGrabGrenade,bThrown);DOREPLIFETIME(ASPGrabGrenade,Victim);DOREPLIFETIME(ASPGrabGrenade,Captor);DOREPLIFETIME(ASPGrabGrenade,ArmedAt);DOREPLIFETIME(ASPGrabGrenade,Epoch);DOREPLIFETIME(ASPGrabGrenade,bExploded);
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);DOREPLIFETIME(ASPGrabGrenade,bThrown);DOREPLIFETIME(ASPGrabGrenade,bPlanted);DOREPLIFETIME(ASPGrabGrenade,Victim);DOREPLIFETIME(ASPGrabGrenade,Captor);DOREPLIFETIME(ASPGrabGrenade,ArmedAt);DOREPLIFETIME(ASPGrabGrenade,Epoch);DOREPLIFETIME(ASPGrabGrenade,bExploded);
 }

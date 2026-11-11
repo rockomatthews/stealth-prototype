@@ -1,17 +1,18 @@
 {
-  "date": "2026-11-07",
-  "source_checkpoint": "ea3cf3befcc73ecef62cf73dc54e205e1cace7d2",
+  "date": "2026-11-11",
+  "source_checkpoint": "01da1c813291033e59d385f659ceea789e1590fc",
+  "validation_date": "2026-11-10",
   "validation": {
-    "recovery_shield_checks": 29,
-    "knockout_checks": 80,
-    "warehouse_checks": 46,
-    "platform": "Unreal 5.8.3 Mac editor; Xbox hardware pending"
+    "weapon_controller_checks": 13,
+    "paired_takedown_checks": 48,
+    "platform": "Unreal 5.8.3 Mac editor; physical controller and Xbox hardware testing pending"
   },
-  "controller_handoff": "CONTROLLER_TEST_TOMORROW.md",
+  "latest_review": "Art/Actions/Review/hand-fit-v4-validation.json",
+  "contact_notes": "HAND_CONTACTS.md",
   "audio_research": "SOUND_SOURCING.md",
   "excluded": [
     "Epic-derived Content/Prototype/Mannequin assets",
-    "build products and local editor settings",
+    "build products, raw downloads, and private local editor settings",
     "Android file-server private configuration"
   ]
 }

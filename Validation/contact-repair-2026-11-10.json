@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-10",
+  "engine": "Unreal 5.8.3, Mac Development Editor",
+  "build": {
+    "result": "Succeeded",
+    "log": "Saved/ContactQA/final-build.log"
+  },
+  "checks": {
+    "specialty": {
+      "passed": 48,
+      "total": 48,
+      "log": "Saved/ContactQA/acceptance-specialty.log"
+    },
+    "rifle": {
+      "passed": 13,
+      "total": 13,
+      "log": "Saved/ContactQA/acceptance-rifle-final.log"
+    }
+  },
+  "presentation": [
+    "Neck hold contact poses revised with shoulder reach",
+    "Derived torso/arm bridges separated; original character imports preserved",
+    "First-person textured arms, reachable support grip, camera-only toss",
+    "Full cloth head covering; independent binocular housing and two forward-facing green lights",
+    "Knee-buckling prone fall and side dismount",
+    "14 fire sprites, 64 planted-blast blood particles, 11 merc fragments"
+  ],
+  "evidence": "Actual four-local-client gameplay recordings; injected controller input; selected mechanics checks with 100ms latency and 2 percent packet loss",
+  "limitations": [
+    "Source characters retain automatic skinning and coarse glove/cloth deformation; no claim of finished character art or universal mesh collision",
+    "Physical Xbox-controller feel, Xbox console execution, internet play, and human voice quality not tested in this revision",
+    "Recorded review clips are silent; Sonniss sounds have not been imported"
+  ],
+  "sha256": {
+    "Source/StealthPrototype/SPBlast.cpp": "32b3fd2d58f7c9fb30a1c482371e39df321076f7a68064fb9d3c20c0afe22e3f",
+    "Source/StealthPrototype/SPCharacterEquipment.cpp": "01eb6ab09ca528f8e40a4a5111a4fbce720f82b82ab0d3d96c9801e7b9fed392",
+    "Source/StealthPrototype/PrototypeCharacter.cpp": "fd8a5981b444ac777ee44932519704e652d17567e3ebd4c47ab78a30f8a2bfde",
+    "Scripts/prepare_grab_animations.py": "6ef14b17d567b7540e466f4440492522f770d03fe8ad3fea4e3386b49c9ac579",
+    "Scripts/repair_merc_grips.py": "c9d8280a30b6818391fa7b07f6be0d070ea4fd7a2523a4af6d248f87b0b25a64",
+    "Scripts/repair_throw_view.py": "b389a77b9990610ffa74ee85cace9a583b2ad2ffb4091b1e14ad3ddc525c396e",
+    "Art/Equipment/SpyEquipment.fbx": "966c20318933d59893c572f9b7ba3ca8c7018d528361d9aaef1ac715f5652181",
+    "Art/Equipment/Goggles.fbx": "286e26d60f799c4dade68dedaed43f696b3769763a6bb431e0eb49e1d61d38ac",
+    "Art/UtilityRifle/MercUtilityArms.fbx": "71fdd67d7ea561e0e6bca74a474e9ce62684d5d891f4e82b291da774882e5f62",
+    "Art/Actions/Review/warehouse-choke-contact-v3-2026-11-10.mp4": "f2c3efc66acf1cd9d9b0c54f14f7d28943feeda02c566aab064d442a436474ce",
+    "Art/Actions/Review/warehouse-grenade-contact-v3-2026-11-10.mp4": "0b5790cf7b00839cf79263b211269a5d6c80c77265847b0658b237b7ee130fbf"
+  }
+}

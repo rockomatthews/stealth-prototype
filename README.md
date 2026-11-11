@@ -1,5 +1,7 @@
 # Stealth Prototype — original 2v2 asymmetric game
 
+Latest controller checkpoint: [utility rifle](UTILITY_RIFLE.md), [specialty holds](SPECIALTY_TAKEDOWNS.md), and [reference feature priorities](REFERENCE_GAMEPLAY.md). Hacking expansion is deferred. See [validation](VALIDATION.md) for verified checks and remaining limits.
+
 Status: **development prototype built against Unreal 5.8.3 on this Mac**. Native editor MCP is connected locally. Automated gameplay observations are recorded in `Saved/acceptance.json`; see `VALIDATION.md` for verified coverage and remaining checks. Playable characters use the imported Meshy spy and merc rigs, separate equipment and prototype animation; final animation polish remains in progress.
 
 The intended console target is Xbox Series X|S. Xbox controller input is implemented for both roles, including sticks, A/B traversal/crouch, X hacking, triggers for attack/aim Y weapon switching and D-pad Up equipment. See [XBOX.md](XBOX.md) for controls, Mac playtesting and the later console build requirements.

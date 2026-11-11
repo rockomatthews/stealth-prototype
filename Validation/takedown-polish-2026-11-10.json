@@ -1,0 +1,300 @@
+{
+  "date": "2026-11-10",
+  "engine": "Unreal 5.8.3",
+  "platform": "Mac Apple Silicon Development Editor",
+  "build": "Succeeded",
+  "checks": {
+    "specialty": 48,
+    "late_rescue": 3,
+    "rifle_and_controller": 13,
+    "total": 64
+  },
+  "lateRescueSeconds": 4.96713924407959,
+  "clips": [
+    {
+      "file": "Art/Actions/Review/warehouse-grenade-revised-2026-11-10.mp4",
+      "sha256": "0ce074789454aa2ac4d76ad9a2ae5dff1c02b0801279028ed63654ba6985b6a2",
+      "seconds": 7,
+      "fps": 20,
+      "audio": false
+    },
+    {
+      "file": "Art/Actions/Review/warehouse-choke-revised-2026-11-10.mp4",
+      "sha256": "193a795dd5378ff136dcd770521b6721714385c310c955c41aaa73aafe255d12",
+      "seconds": 8.4,
+      "fps": 20,
+      "audio": false
+    }
+  ],
+  "rules": {
+    "tapRT": "neck snap",
+    "holdRTWithGrenade": "steal, arm, plant, shove; original 2.9-second pin-pull fuse",
+    "holdRTWithoutGrenades": "five-second lethal strangulation, paired forward collapse, five-second respawn",
+    "Y": "draw / holster",
+    "X": "rear grab",
+    "rifleScale": 0.75
+  },
+  "limitations": [
+    "Character meshes, skinning and facial detail remain prototype art.",
+    "Silent gameplay review clips use actual viewport frames with a close-to-wide review camera.",
+    "Physical Xbox controller feel, Xbox console build and internet multiplayer have not been verified."
+  ],
+  "passedChecks": [
+    {
+      "name": "all four clients load the new paired clips",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "merc rifle stays drawn and uses the reduced body scale during neck hold",
+      "passed": true
+    },
+    {
+      "name": "tap RT still selects quick neck snap",
+      "passed": true
+    },
+    {
+      "name": "quick snap kills and closes automatic pair voice",
+      "passed": true
+    },
+    {
+      "name": "participants alive with no stale hold/knockout/protection",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "held RT with no grenades mounts the five-second back choke",
+      "passed": true
+    },
+    {
+      "name": "merc walks and turns while carrying the spy",
+      "passed": true
+    },
+    {
+      "name": "merc can aim his first-person carbine during choke",
+      "passed": true
+    },
+    {
+      "name": "merc RT fires a real server-approved shot during choke",
+      "passed": true
+    },
+    {
+      "name": "automatic private grab voice stays open during back choke",
+      "passed": true
+    },
+    {
+      "name": "five-second strangulation kills merc and retains a visible collapse",
+      "passed": true
+    },
+    {
+      "name": "choke ends with forward merc collapse and spy disengage clip",
+      "passed": true
+    },
+    {
+      "name": "participants alive with no stale hold/knockout/protection",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "second choke starts",
+      "passed": true
+    },
+    {
+      "name": "choked merc can RB throw using the same finite supply",
+      "passed": true
+    },
+    {
+      "name": "damage to rider interrupts choke and closes pair voice",
+      "passed": true
+    },
+    {
+      "name": "interrupted choke has no delayed knockout",
+      "passed": true
+    },
+    {
+      "name": "participants alive with no stale hold/knockout/protection",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "held RT with shared grenade stock selects waistband plant",
+      "passed": true
+    },
+    {
+      "name": "steal spends exactly one shared merc grenade",
+      "passed": true
+    },
+    {
+      "name": "grenade is concealed at waist after pin pull",
+      "passed": true
+    },
+    {
+      "name": "shove releases spy while merc panics with a live grenade",
+      "passed": true
+    },
+    {
+      "name": "spy has movement restored before detonation",
+      "passed": true
+    },
+    {
+      "name": "planted grenade explodes at waist and inevitably kills merc",
+      "passed": true
+    },
+    {
+      "name": "planted blast renders textured merc body fragments on every client",
+      "passed": true
+    },
+    {
+      "name": "spy survives outside blast radius after shove",
+      "passed": true
+    },
+    {
+      "name": "participants alive with no stale hold/knockout/protection",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "next grenade has its pin pulled",
+      "passed": true
+    },
+    {
+      "name": "interrupt after pin pull closes the hold",
+      "passed": true
+    },
+    {
+      "name": "live grenade survives interruption and finishes its fuse",
+      "passed": true
+    },
+    {
+      "name": "participants alive with no stale hold/knockout/protection",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "grenade is planted before captor-death case",
+      "passed": true
+    },
+    {
+      "name": "captor death releases hold but leaves merc panicking",
+      "passed": true
+    },
+    {
+      "name": "planted grenade still kills merc after captor dies",
+      "passed": true
+    },
+    {
+      "name": "fresh warehouse round for network stress",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "back choke is replicated under 100ms lag and 2 percent loss",
+      "passed": true
+    },
+    {
+      "name": "five-second lethal strangulation converges under lag/loss",
+      "passed": true
+    },
+    {
+      "name": "participants alive with no stale hold/knockout/protection",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "final planted grenade exists before round cancellation",
+      "passed": true
+    },
+    {
+      "name": "round reset clears explosives, panic and all hold voice",
+      "passed": true
+    },
+    {
+      "name": "last-moment rescue clears both grab states and voice",
+      "passed": true
+    },
+    {
+      "name": "rescued merc remains alive beyond the original five-second finish",
+      "passed": true
+    },
+    {
+      "name": "interrupted spy never plays the successful choke dismount",
+      "passed": true
+    },
+    {
+      "name": "solo merc loads original utility rifle and first-person arms",
+      "passed": true
+    },
+    {
+      "name": "both ready-pose hands align with the actual weapon grip sockets",
+      "passed": true
+    },
+    {
+      "name": "D-pad Up still controls replicated flashlight",
+      "passed": true
+    },
+    {
+      "name": "LT aims with support grip still aligned",
+      "passed": true
+    },
+    {
+      "name": "Y holsters rifle and hides reticle",
+      "passed": true
+    },
+    {
+      "name": "Y restores rifle and new reticle without toggling light",
+      "passed": true
+    },
+    {
+      "name": "RB grenade animation still spends shared stock",
+      "passed": true
+    },
+    {
+      "name": "new ready grip recovers after grenade throw",
+      "passed": true
+    },
+    {
+      "name": "four network worlds use the same rifle asset on both mercs",
+      "passed": true
+    },
+    {
+      "name": "remote merc fires an actual server-accepted shot with replacement rifle",
+      "passed": true
+    },
+    {
+      "name": "remote Y holster replicates to every client",
+      "passed": true
+    },
+    {
+      "name": "remote re-equip restores grip on every client",
+      "passed": true
+    },
+    {
+      "name": "weapon light state converges with lag and loss",
+      "passed": true
+    }
+  ]
+}

@@ -1,8 +1,22 @@
-# Free sound shortlist — November 7, 2026
+# Sound sourcing — Sonniss selected November 10, 2026
 
 Current game effects are procedural placeholders: Step/Shot (recorded in Scripts/export_public.py asset notes), CameraLure/CameraGas (Scripts/import_camera_assets.py), GrenadeBlast (Scripts/import_grab_animations.py) and DropImpact (Scripts/build_action_animations.py). No external replacement audio has been downloaded or auditioned in this research pass.
 
-## Start with small CC0 candidates
+## Selected source: Sonniss GameAudioGDC
+
+User decision: use [Sonniss GameAudioGDC](https://sonniss.com/gameaudiogdc/) for game sounds. The older shortlist below remains reference material; Sonniss is the primary source for the next audio pass.
+
+Priority order:
+1. Merc rifle shots and weapon handling; grenade pin, throw, bounce and blast.
+2. Spy fabric/harness and merc equipment movement; concrete and metal footsteps.
+3. Goggles hinge, flashlight switch, rope friction, vent movement and landing impacts.
+4. Taser, sticky-camera launch/stick, camera controls and warehouse ambience.
+
+Audition selected files and relevant archives before downloading large collections. Preserve each original filename, collection/year, supplier, source URL, download date and applicable license. Import chosen effects as local production assets and synchronize them with actual gameplay/animation events. No Sonniss audio has been downloaded or imported by this decision update; existing procedural placeholders remain.
+
+[License verified November 10, 2026](https://sonniss.com/gdc-bundle-license/): version 2.0, effective August 27, 2026. Commercial game use and modification are permitted without attribution. The license restricts supplying the sound effects themselves, including modified versions. Keep original WAVs, edited source sounds and their Unreal sound assets out of the public GitHub export; share finished game builds normally. Establish the private-audio storage/export exclusion before the first import. Preserve the license applicable when downloading.
+
+## Earlier alternatives — reference only
 
 | Need | Candidate | Verified listing / practical notes |
 | --- | --- | --- |
@@ -24,9 +38,9 @@ Freesound downloads require a free account. Licenses are per sound: keep the exa
 
 ## First audition batch and implementation handoff
 
-1. Pick 3–5 merc single-shot variations, dry where possible; compare the M4/M16 candidates before selecting.
+1. Pick 3–5 Sonniss merc single-shot variations, dry where possible; compare close and distant layers.
 2. Select small mechanism layers for weapon draw/holster, goggles flip and flashlight switch.
-3. Cut 6–10 short gear rustles from the police-operator recording; keep spy fabric quieter/lighter and merc equipment heavier.
+3. Select 6–10 short Sonniss gear rustles; keep spy fabric quieter/lighter and merc equipment heavier.
 4. Add concrete boots, metal catwalk steps, vent crawl scrapes, rope friction and landing impacts.
 5. Follow with taser discharge, sticky-camera launch/stick, camera rotation/zoom, grenade pin/throw/bounce/blast and warehouse ambience.
 

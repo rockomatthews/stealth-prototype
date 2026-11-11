@@ -25,13 +25,13 @@ for v in arms.data.vertices:
  axis=(wrist-elbow).normalized();along=(v.co-elbow).dot(axis);length=(wrist-elbow).length
  fingers=[(g.group,g.weight) for g in v.groups if arms.vertex_groups[g.group].name.endswith('_'+side) and arms.vertex_groups[g.group].name.startswith(('index_','middle_','ring_','pinky_','thumb_'))]
  finger_weight=sum(w for _,w in fingers)
- for g in list(v.groups):arms.vertex_groups[g.group].remove([v.index])
+ for index in [g.group for g in v.groups]:arms.vertex_groups[index].remove([v.index])
  if finger_weight>.25 and along>length-2:
   for group,weight in fingers:arms.vertex_groups[group].add([v.index],weight/finger_weight,'REPLACE')
  else:
   hand_weight=max(0,min(1,(along-(length-5))/10));elbow_weight=max(0,min(.45,(4-along)/12))
   for name,weight in [('upperarm_'+side,elbow_weight),('lowerarm_'+side,(1-elbow_weight)*(1-hand_weight)),('hand_'+side,(1-elbow_weight)*hand_weight)]:
-   if weight>0:arms.vertex_groups[name].add([v.index],weight,'REPLACE')
+   if weight>0:(arms.vertex_groups.get(name) or arms.vertex_groups.new(name=name)).add([v.index],weight,'REPLACE')
 # Clean closed sleeves for the extreme first-person perspective. Preserve the
 # user's textured gloves; the world character continues using the full source.
 sleeve_mat=bpy.data.materials.new('FPSleeve');sleeve_mat.diffuse_color=(.018,.028,.05,1)

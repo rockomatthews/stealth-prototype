@@ -64,6 +64,14 @@ class StealthProjectTools(unreal.ToolsetDefinition):
 
     @toolset_registry.tool_call
     @staticmethod
+    def import_merc_utility() -> str:
+        """Import the fixed original heavy merc rifle and grip clips; PIE stopped."""
+        script=Path(unreal.Paths.project_dir())/'Scripts'/'import_merc_utility.py'
+        exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__'})
+        return 'Merc utility rifle imported and saved'
+
+    @toolset_registry.tool_call
+    @staticmethod
     def import_equipment() -> str:
         """Import the fixed project equipment build and validate its saved assets."""
         if unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world() is not None: raise RuntimeError('Stop PIE before importing')
@@ -88,6 +96,32 @@ class StealthProjectTools(unreal.ToolsetDefinition):
         script=Path(unreal.Paths.project_dir())/'Scripts'/'import_grab_animations.py'
         exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__'})
         return 'Grab animations imported and saved'
+
+    @toolset_registry.tool_call
+    @staticmethod
+    def import_specialty_animations() -> str:
+        """Import only the five original specialty clips; preserve base assets and sounds."""
+        if unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world() is not None: raise RuntimeError('Stop PIE first')
+        script=Path(unreal.Paths.project_dir())/'Scripts'/'import_grab_animations.py'
+        exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__','SPECIALTY_ONLY':True})
+        return 'Specialty animations imported and saved'
+
+    @toolset_registry.tool_call
+    @staticmethod
+    def repair_character_presentation() -> str:
+        """Import only the repaired derived spy face and merc gripping poses; PIE stopped."""
+        if unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_game_world() is not None: raise RuntimeError('Stop PIE first')
+        script=Path(unreal.Paths.project_dir())/'Scripts'/'import_presentation_repair.py'
+        exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__'})
+        return 'Repaired spy face and rifle grips imported and saved'
+
+    @toolset_registry.tool_call
+    @staticmethod
+    def prepare_specialty_fx() -> str:
+        """Update the existing original blast material for warehouse exposure; PIE stopped."""
+        script=Path(unreal.Paths.project_dir())/'Scripts'/'import_specialty_fx.py'
+        exec(compile(script.read_text(),str(script),'exec'),{'__name__':'__main__'})
+        return 'Specialty blast material saved'
 
     @toolset_registry.tool_call
     @staticmethod

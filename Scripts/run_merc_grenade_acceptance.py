@@ -41,7 +41,7 @@ try:
  test('last remote grenade expires cleanly',lambda d:all(not live(w) for w in d['worlds']),6)
  pad(1,'gadget');test('empty remote request never creates extra grenades',lambda d:all_stock(d,1,0) and all(not live(w) for w in d['worlds']))
  grab();pad(1,'gadget');test('grabbed merc cannot throw even by pressing RB',lambda d:all_stock(d,1,0) and all(not live(w) for w in d['worlds']))
- extended();test('throwing all grenades makes spy choose kick fallback',lambda d:synced(d,2,lambda p:p['finisher']==2) and all_stock(d,1,0),3)
+ extended();test('throwing all grenades makes spy choose back-choke fallback',lambda d:synced(d,2,lambda p:p['finisher']==2) and all_stock(d,1,0),3)
  pad(2,'b');action(1,'damage');merc_ready()
  action(2,'place_terminal');action(1,'place_open');time.sleep(.5);pad(1,'gadget');test('merc throw leaves one charge for spy theft',lambda d:all_stock(d,1,1))
  test('pre-theft throw finishes its fuse',lambda d:all(not live(w) for w in d['worlds']),6)

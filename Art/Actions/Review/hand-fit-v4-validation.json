@@ -1,0 +1,218 @@
+{
+  "date": "2026-11-10",
+  "build": "StealthPrototypeEditor Mac Development / Unreal 5.8.3: succeeded",
+  "checks": {
+    "weapon": {
+      "passed": 13,
+      "names": [
+        "solo merc loads original utility rifle and first-person arms",
+        "both ready-pose hands align with the actual weapon grip sockets",
+        "D-pad Up still controls replicated flashlight",
+        "LT aims with support grip still aligned",
+        "Y holsters rifle and hides reticle",
+        "Y restores rifle and new reticle without toggling light",
+        "RB grenade animation still spends shared stock",
+        "new ready grip recovers after grenade throw",
+        "four network worlds use the same rifle asset on both mercs",
+        "remote merc fires an actual server-accepted shot with replacement rifle",
+        "remote Y holster replicates to every client",
+        "remote re-equip restores grip on every client",
+        "weapon light state converges with lag and loss"
+      ]
+    },
+    "specialty": {
+      "passed": 48,
+      "names": [
+        "all four clients load the new paired clips",
+        "X rear grab established on all clients",
+        "merc rifle stays drawn and uses the reduced body scale during neck hold",
+        "tap RT still selects quick neck snap",
+        "quick snap kills and closes automatic pair voice",
+        "participants alive with no stale hold/knockout/protection",
+        "X rear grab established on all clients",
+        "held RT with no grenades mounts the five-second back choke",
+        "merc walks and turns while carrying the spy",
+        "merc can aim his first-person carbine during choke",
+        "merc RT fires a real server-approved shot during choke",
+        "automatic private grab voice stays open during back choke",
+        "five-second strangulation kills merc and retains a visible collapse",
+        "choke ends with forward merc collapse and spy disengage clip",
+        "participants alive with no stale hold/knockout/protection",
+        "X rear grab established on all clients",
+        "second choke starts",
+        "choked merc can RB throw using the same finite supply",
+        "damage to rider interrupts choke and closes pair voice",
+        "interrupted choke has no delayed knockout",
+        "participants alive with no stale hold/knockout/protection",
+        "X rear grab established on all clients",
+        "held RT with shared grenade stock selects waistband plant",
+        "steal spends exactly one shared merc grenade",
+        "grenade is concealed at waist after pin pull",
+        "shove releases spy while merc panics with a live grenade",
+        "spy has movement restored before detonation",
+        "planted grenade explodes at waist and inevitably kills merc",
+        "planted blast renders textured merc body fragments on every client",
+        "spy survives outside blast radius after shove",
+        "participants alive with no stale hold/knockout/protection",
+        "X rear grab established on all clients",
+        "next grenade has its pin pulled",
+        "interrupt after pin pull closes the hold",
+        "live grenade survives interruption and finishes its fuse",
+        "participants alive with no stale hold/knockout/protection",
+        "X rear grab established on all clients",
+        "grenade is planted before captor-death case",
+        "captor death releases hold but leaves merc panicking",
+        "planted grenade still kills merc after captor dies",
+        "fresh warehouse round for network stress",
+        "X rear grab established on all clients",
+        "back choke is replicated under 100ms lag and 2 percent loss",
+        "five-second lethal strangulation converges under lag/loss",
+        "participants alive with no stale hold/knockout/protection",
+        "X rear grab established on all clients",
+        "final planted grenade exists before round cancellation",
+        "round reset clears explosives, panic and all hold voice"
+      ]
+    }
+  },
+  "sourceContacts": {
+    "Spy": {
+      "garment_vertices": 2814,
+      "contact_vertices": 7647,
+      "contact_corrections": 198,
+      "worst_before_cm": 3.3761730138212442,
+      "remaining_deeper_than_half_mm": 0,
+      "worst_after_cm": 0,
+      "maximum_bind_corrective_cm": 9.377621988108105,
+      "worst_before_vertices": [
+        {
+          "id": 22974,
+          "groups": {
+            "upperarm_r": 0.00044314557453617454,
+            "lowerarm_r": 0.999556839466095
+          },
+          "push_cm": 3.870174321755927
+        }
+      ]
+    },
+    "Merc": {
+      "garment_vertices": 3035,
+      "contact_vertices": 5840,
+      "contact_corrections": 354,
+      "worst_before_cm": 1.421875,
+      "remaining_deeper_than_half_mm": 0,
+      "worst_after_cm": 0,
+      "maximum_bind_corrective_cm": 5.367543214168417,
+      "worst_before_vertices": []
+    },
+    "View": {
+      "garment_vertices": 1151,
+      "contact_vertices": 5840,
+      "contact_corrections": 355,
+      "worst_before_cm": 1.42181396484375,
+      "remaining_deeper_than_half_mm": 0,
+      "worst_after_cm": 0,
+      "maximum_bind_corrective_cm": 4.918514930689639,
+      "worst_before_vertices": []
+    }
+  },
+  "launcherContact": {
+    "Launcher": {
+      "garment_vertices": 2814,
+      "contact_vertices": 5840,
+      "contact_corrections": 189,
+      "worst_before_cm": 0.5540924072265625,
+      "remaining_deeper_than_half_mm": 0,
+      "worst_after_cm": 0,
+      "maximum_bind_corrective_cm": 6.348193817410779,
+      "worst_before_vertices": []
+    }
+  },
+  "importedMorphs": {
+    "Spy": {
+      "asset": "/Game/Characters/Equipment/SK_SpyEquipment.SK_SpyEquipment",
+      "morphs": [
+        "ContactClothR",
+        "ContactClothL",
+        "LauncherGripR",
+        "LauncherGripL"
+      ]
+    },
+    "Merc": {
+      "asset": "/Game/Characters/Meshy/Merc/SK_Merc.SK_Merc",
+      "morphs": [
+        "ContactClothR",
+        "ContactClothL"
+      ]
+    },
+    "View": {
+      "asset": "/Game/Characters/UtilityRifle/SK_MercUtilityArms.SK_MercUtilityArms",
+      "morphs": [
+        "ContactClothR",
+        "ContactClothL"
+      ]
+    }
+  },
+  "clips": [
+    {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 1280,
+          "height": 746,
+          "r_frame_rate": "20/1",
+          "nb_frames": "105"
+        }
+      ],
+      "format": {
+        "duration": "5.250000"
+      },
+      "path": "Art/Actions/Review/weapon-hand-fit-v4-2026-11-10.mp4",
+      "sha256": "5446a553141f0551654e38a4968693c5fa4a0634cc5069743e7bfbd0f12c319c",
+      "bytes": 1536284
+    },
+    {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 1280,
+          "height": 746,
+          "r_frame_rate": "20/1",
+          "nb_frames": "168"
+        }
+      ],
+      "format": {
+        "duration": "8.400000"
+      },
+      "path": "Art/Actions/Review/warehouse-choke-hand-fit-v4-2026-11-10.mp4",
+      "sha256": "4983ecf1020d456df8a89a041ccb8ad9609908bf70b26188fda57089ad27357a",
+      "bytes": 1174494
+    },
+    {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "width": 1280,
+          "height": 746,
+          "r_frame_rate": "20/1",
+          "nb_frames": "140"
+        }
+      ],
+      "format": {
+        "duration": "7.000000"
+      },
+      "path": "Art/Actions/Review/warehouse-grenade-hand-fit-v4-2026-11-10.mp4",
+      "sha256": "81916159568ce6c2469dc4c1e6629d9f37ebfca90dbdefdf2063d3ecc217433d",
+      "bytes": 1463722
+    }
+  ],
+  "limits": [
+    "Mac editor gameplay; controller bindings injected by tests, not a physical controller session",
+    "Four clients are local networked PIE clients, not a remote internet session",
+    "Source surface checks cover reference contact poses; gameplay frames were also visually inspected",
+    "Clips are silent actual viewports, captured against slowed simulation time",
+    "Review editor used -norenderthread after a Slate teardown crash; no representative performance claim"
+  ]
+}

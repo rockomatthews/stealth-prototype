@@ -1,0 +1,14 @@
+{
+  "Spy": {
+    "removed_bridge_faces": 191,
+    "bad_edges": 184,
+    "sealed_boundaries": 183,
+    "source": "Art/Grab/SpyHold.blend"
+  },
+  "Merc": {
+    "removed_bridge_faces": 346,
+    "bad_edges": 337,
+    "sealed_boundaries": 348,
+    "source": "Art/Grab/MercHold.blend"
+  }
+}

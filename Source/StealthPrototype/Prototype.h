@@ -58,7 +58,7 @@ struct FSPWeaponState
 };
 
 UENUM()
-enum class ESPFinisher : uint8 { None, NeckSnap, Kick, Grenade };
+enum class ESPFinisher : uint8 { None, NeckSnap, BackChoke, Grenade };
 
 USTRUCT()
 struct FSPGrabState
@@ -77,6 +77,7 @@ struct FSPKnockout
 {
     GENERATED_BODY()
     UPROPERTY() bool bActive=false;
+    UPROPERTY() bool bForwardCollapse=false;
     UPROPERTY() float Until=0;
     UPROPERTY() float StartedAt=0;
     UPROPERTY() FVector StandLocation=FVector::ZeroVector;
@@ -92,6 +93,7 @@ struct FSPRecoveryShield
     UPROPERTY() float Until=0;
     UPROPERTY() float GetUpAt=0;
     UPROPERTY() float CapsuleRise=54;
+    UPROPERTY() bool bForwardCollapse=false;
 };
 
 UCLASS()
@@ -148,7 +150,7 @@ public:
     bool IsKnockedOut() const {return Knockout.bActive && Health>0;}
     void UpdateDropAttack();
     bool TryDropKnockoutImpact(const FHitResult& Hit,float FallingSpeed);
-    void BeginDropKnockout(ASPCharacter* Spy);
+    void BeginDropKnockout(ASPCharacter* Spy,bool ForwardCollapse=false);
     void ClearKnockout();
     UFUNCTION() void OnRep_Knockout(FSPKnockout Previous);
     UPROPERTY(EditDefaultsOnly,Category="Combat") float DropKnockoutSeconds=6.f;
@@ -163,6 +165,10 @@ public:
     UPROPERTY(ReplicatedUsing=OnRep_Grab) FSPGrabState Grab;
     bool IsRestrained() const { return Grab.Token!=0; }
     bool IsCaptor() const { return IsRestrained() && Grab.bCaptor; }
+    bool IsChokeVictim() const { return IsRestrained() && !Grab.bCaptor && Grab.Finisher==ESPFinisher::BackChoke; }
+    bool BlocksGrabInput() const { return IsRestrained() && !IsChokeVictim() && (!IsCaptor() || IsFinishing()); }
+    bool BlocksGrabCombat() const { return IsRestrained() && !IsChokeVictim(); }
+    double LastShotTime() const {return LastAttackTime;}
     bool TryBeginGrab();
     void EndGrab();
     void ValidateGrab();
@@ -180,8 +186,12 @@ public:
     void ThrowMercGrenade();
     void ReleaseMercGrenade();
     void UpdateGrenadeThrow();
-    bool IsThrowingGrenade() const {return !IsSpy() && Health>0 && !IsRestrained() && !IsStunned() && ServerNow()>=ThrowStartedAt && ServerNow()-ThrowStartedAt<.966667f;}
+    bool IsThrowingGrenade() const {return !IsSpy() && Health>0 && !BlocksGrabCombat() && !IsStunned() && ServerNow()>=ThrowStartedAt && ServerNow()-ThrowStartedAt<.966667f;}
     UPROPERTY(Replicated) float ThrowStartedAt=-10.f;
+    UPROPERTY(Replicated) float PanicStartedAt=-10.f;
+    UPROPERTY(Replicated) float PanicUntil=-10.f;
+    bool IsPanicking() const {return !IsSpy() && Health>0 && IsRoundActive() && ServerNow()<PanicUntil;}
+    UPROPERTY(Transient) TObjectPtr<UAnimSequence> MercPanic;
     bool bThrowPending=false;
     UPROPERTY(Transient) TObjectPtr<UAnimSequence> MercThrow;
     UPROPERTY(Transient) TObjectPtr<UAnimSequence> SpyRopeClip;
@@ -206,6 +216,14 @@ public:
     FRotator HeldFacing=FRotator::ZeroRotator;
     uint32 HeldPoseToken=0;
     UPROPERTY(Transient) TArray<TObjectPtr<UAnimSequence>> GrabClips;
+    UPROPERTY(Transient) TObjectPtr<UAnimSequence> SpyChokeExit;
+    UPROPERTY(Transient) TObjectPtr<UAnimSequence> MercChokeFall;
+    UPROPERTY(Replicated) float ChokeExitAt=-10.f;
+    UPROPERTY(Replicated) float ChokeDeathAt=-10.f;
+    bool IsChokeCorpse() const {return !IsSpy() && Health<=0 && ChokeDeathAt>0;}
+    UPROPERTY(EditDefaultsOnly,Category="Equipment",meta=(ClampMin="0.5",ClampMax="1.0")) float MercRifleScale=.75f;
+    bool IsChokeExiting() const {return IsSpy() && Health>0 && ServerNow()>=ChokeExitAt && ServerNow()<ChokeExitAt+1.6f;}
+    TWeakObjectPtr<ASPCharacter> ChokeExitPartner;
     UFUNCTION() void OnRep_Grab(FSPGrabState Previous);
     UFUNCTION(Server,Reliable) void ServerReleaseGrab();
     UFUNCTION(Server,Reliable) void ServerFinishGrab();
@@ -498,6 +516,9 @@ public:
     ASPGrabGrenade();
     UPROPERTY(VisibleAnywhere) USphereComponent* Collision;
     UPROPERTY(VisibleAnywhere) UProjectileMovementComponent* Projectile;
+    // Shared fuse for thrown and stolen grenades, measured from pin pull.
+    UPROPERTY(EditDefaultsOnly,Category="Grenade") float FuseSeconds=2.9f;
+    UPROPERTY(Replicated) bool bPlanted=false;
     UPROPERTY(Replicated) bool bThrown=false;
     void Launch(const FVector& Velocity);
     int32 BounceCount=0;
@@ -515,4 +536,17 @@ public:
     UPROPERTY(ReplicatedUsing=OnRep_Exploded) bool bExploded=false;
     UFUNCTION() void OnRep_Exploded();
     bool bDetached=false;
+    float BlastStartedAt=-1.f;
+    UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> BlastClouds;
+    UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> BlastFire;
+    UPROPERTY(Transient) TArray<TObjectPtr<UStaticMeshComponent>> BlastBlood;
+    TArray<FVector> BloodVelocity;
+    TArray<bool> BloodDeposited;
+    UPROPERTY(Transient) TObjectPtr<class UPointLightComponent> BlastLight;
+    UPROPERTY(Transient) TArray<TObjectPtr<UStaticMesh>> FragmentAssets;
+    UPROPERTY(Transient) TObjectPtr<UStaticMesh> CloudAsset;
+    UPROPERTY(Transient) TObjectPtr<class UMaterialInterface> DustMaterial;
+    UPROPERTY(Transient) TObjectPtr<class UMaterialInterface> CutMaterial;
+    int32 BodyFragmentCount=0;
+    void UpdateBlast(float Delta);
 };

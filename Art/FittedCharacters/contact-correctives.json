@@ -1,0 +1,41 @@
+{
+  "Spy": {
+    "garment_vertices": 2814,
+    "contact_vertices": 7647,
+    "contact_corrections": 198,
+    "worst_before_cm": 3.3761730138212442,
+    "remaining_deeper_than_half_mm": 0,
+    "worst_after_cm": 0,
+    "maximum_bind_corrective_cm": 9.377621988108105,
+    "worst_before_vertices": [
+      {
+        "id": 22974,
+        "groups": {
+          "upperarm_r": 0.00044314557453617454,
+          "lowerarm_r": 0.999556839466095
+        },
+        "push_cm": 3.870174321755927
+      }
+    ]
+  },
+  "Merc": {
+    "garment_vertices": 3035,
+    "contact_vertices": 5840,
+    "contact_corrections": 354,
+    "worst_before_cm": 1.421875,
+    "remaining_deeper_than_half_mm": 0,
+    "worst_after_cm": 0,
+    "maximum_bind_corrective_cm": 5.367543214168417,
+    "worst_before_vertices": []
+  },
+  "View": {
+    "garment_vertices": 1151,
+    "contact_vertices": 5840,
+    "contact_corrections": 355,
+    "worst_before_cm": 1.42181396484375,
+    "remaining_deeper_than_half_mm": 0,
+    "worst_after_cm": 0,
+    "maximum_bind_corrective_cm": 4.918514930689639,
+    "worst_before_vertices": []
+  }
+}

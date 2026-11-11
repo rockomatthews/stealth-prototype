@@ -1,3 +1,15 @@
+> Art revision in progress: the user rejected the first utility-rifle appearance and paused gameplay testing. The Warden replacement mesh is newer than the rifle checks below; those results do not validate its final appearance or hand contact.
+
+# Utility rifle, specialty holds and quiet movement — November 9, 2026
+
+Unreal 5.8.3 Mac Development Editor build succeeded. **45/45 specialty, 13/13 utility-rifle and 9/9 quiet-movement checks passed** in Warehouse. Tests use simulated Xbox inputs and four local network worlds, including selected checks at 100 ms lag and 2% loss. Physical controller feel and Xbox console execution remain unverified.
+
+Hold RT during an X grab plants a stolen shared-supply grenade or, at zero stock, starts a five-second back choke. The choked merc can move, turn and fire; damage can interrupt the spy. The grenade fuse continues after release or spy death. Tap RT retains the quick finish. See [SPECIALTY_TAKEDOWNS.md](SPECIALTY_TAKEDOWNS.md).
+
+The original larger merc rifle has skeletal recoil, support-hand IK, forearm-weighted first-person sleeves, a weapon-mounted flashlight and an amber broken-ring reticle. Crouch and gentle analog movement are silent; fast steps produce directional client cues. See [UTILITY_RIFLE.md](UTILITY_RIFLE.md). First-person arms/materials and animation contact remain prototype quality, not finished character art.
+
+The supplied video is a PC Enhanced match. Preserve Xbox bindings and prompts: Y draw/holster only, X grab, D-pad Up goggles/flashlight. Hacking expansion is deferred. Camouflage, mines, full detection modes and finite rifle ammunition/reload remain pending; see [REFERENCE_GAMEPLAY.md](REFERENCE_GAMEPLAY.md). Compact test evidence is in Validation/specialty-takedowns.json, utility-rifle.json and quiet-movement.json.
+
 # Current checkpoint — November 7, 2026
 
 The new Warehouse map passed 46/46 focused solo and four-client checks, including six rope entrances, crouched vent clearance, top remount/descent, 100 ms latency with 2% packet loss, gunfire through duct skins, drop knockouts/recovery, the merc entrance, and owner/remote grenade animation props. The current layout contains 375 crates. Evidence and art provenance are documented in [WAREHOUSE.md](WAREHOUSE.md).

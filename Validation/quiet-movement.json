@@ -1,0 +1,49 @@
+{
+  "engine": "Unreal 5.8.3",
+  "platform": "Mac Apple Silicon",
+  "map": "Warehouse",
+  "passed": 9,
+  "total": 9,
+  "checks": [
+    {
+      "name": "four-player warehouse round active",
+      "passed": true
+    },
+    {
+      "name": "spy is crouched for silent movement",
+      "passed": true
+    },
+    {
+      "name": "moving crouched spy creates no merc movement cue",
+      "passed": true
+    },
+    {
+      "name": "spy stands for analog sneak test",
+      "passed": true
+    },
+    {
+      "name": "low analog-stick movement is silent but really moves",
+      "passed": true
+    },
+    {
+      "name": "fast spy movement creates an actual merc directional cue",
+      "passed": true
+    },
+    {
+      "name": "movement cue expires after spy stops",
+      "passed": true
+    },
+    {
+      "name": "crouch converges under lag",
+      "passed": true
+    },
+    {
+      "name": "quiet crouching does not renew detector under lag/loss",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Simulated Xbox inputs; physical controller feel and Xbox console build unverified.",
+    "Local four-client networking; no internet test claimed."
+  ]
+}

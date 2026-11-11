@@ -1,0 +1,193 @@
+{
+  "engine": "Unreal 5.8.3",
+  "platform": "Mac Apple Silicon",
+  "map": "Warehouse",
+  "passed": 45,
+  "total": 45,
+  "checks": [
+    {
+      "name": "all four clients load the new paired clips",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "tap RT still selects quick neck snap",
+      "passed": true
+    },
+    {
+      "name": "quick snap kills and closes automatic pair voice",
+      "passed": true
+    },
+    {
+      "name": "participants alive with no stale hold/knockout/protection",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "held RT with no grenades mounts the five-second back choke",
+      "passed": true
+    },
+    {
+      "name": "merc walks and turns while carrying the spy",
+      "passed": true
+    },
+    {
+      "name": "merc can aim his first-person carbine during choke",
+      "passed": true
+    },
+    {
+      "name": "merc RT fires a real server-approved shot during choke",
+      "passed": true
+    },
+    {
+      "name": "automatic private grab voice stays open during back choke",
+      "passed": true
+    },
+    {
+      "name": "five-second choke knocks merc out without killing him",
+      "passed": true
+    },
+    {
+      "name": "participants alive with no stale hold/knockout/protection",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "second choke starts",
+      "passed": true
+    },
+    {
+      "name": "choked merc can RB throw using the same finite supply",
+      "passed": true
+    },
+    {
+      "name": "damage to rider interrupts choke and closes pair voice",
+      "passed": true
+    },
+    {
+      "name": "interrupted choke has no delayed knockout",
+      "passed": true
+    },
+    {
+      "name": "participants alive with no stale hold/knockout/protection",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "held RT with shared grenade stock selects waistband plant",
+      "passed": true
+    },
+    {
+      "name": "steal spends exactly one shared merc grenade",
+      "passed": true
+    },
+    {
+      "name": "grenade is concealed at waist after pin pull",
+      "passed": true
+    },
+    {
+      "name": "shove releases spy while merc panics with a live grenade",
+      "passed": true
+    },
+    {
+      "name": "spy has movement restored before detonation",
+      "passed": true
+    },
+    {
+      "name": "planted grenade explodes at waist and inevitably kills merc",
+      "passed": true
+    },
+    {
+      "name": "spy survives outside blast radius after shove",
+      "passed": true
+    },
+    {
+      "name": "participants alive with no stale hold/knockout/protection",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "next grenade has its pin pulled",
+      "passed": true
+    },
+    {
+      "name": "interrupt after pin pull closes the hold",
+      "passed": true
+    },
+    {
+      "name": "live grenade survives interruption and finishes its fuse",
+      "passed": true
+    },
+    {
+      "name": "participants alive with no stale hold/knockout/protection",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "grenade is planted before captor-death case",
+      "passed": true
+    },
+    {
+      "name": "captor death releases hold but leaves merc panicking",
+      "passed": true
+    },
+    {
+      "name": "planted grenade still kills merc after captor dies",
+      "passed": true
+    },
+    {
+      "name": "fresh warehouse round for network stress",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "back choke is replicated under 100ms lag and 2 percent loss",
+      "passed": true
+    },
+    {
+      "name": "five-second nonlethal knockout converges under lag/loss",
+      "passed": true
+    },
+    {
+      "name": "participants alive with no stale hold/knockout/protection",
+      "passed": true
+    },
+    {
+      "name": "X rear grab established on all clients",
+      "passed": true
+    },
+    {
+      "name": "final planted grenade exists before round cancellation",
+      "passed": true
+    },
+    {
+      "name": "round reset clears explosives, panic and all hold voice",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Simulated Xbox inputs; physical controller feel and Xbox console build unverified.",
+    "Local four-client networking; no internet test claimed."
+  ]
+}

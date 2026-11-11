@@ -110,20 +110,28 @@ void ASPCharacter::BeginPlay()
     SpyAppearance=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Equipment/SK_SpyEquipment.SK_SpyEquipment"));
     if (!SpyAppearance) SpyAppearance=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Meshy/Spy/SK_Spy.SK_Spy"));
     FirstPersonArms->SetSkeletalMesh(LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Equipment/SK_MercArms.SK_MercArms")));
+    if (auto* UtilityArms=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/UtilityRifle/SK_MercUtilityArms.SK_MercUtilityArms"))) FirstPersonArms->SetSkeletalMesh(UtilityArms);
     FirstPersonThrowGrenade->AttachToComponent(FirstPersonArms,FAttachmentTransformRules::KeepRelativeTransform,TEXT("hand_r"));
     CarbineAsset=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Equipment/SK_Carbine.SK_Carbine"));
+    if (auto* Utility=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/UtilityRifle/SK_MercUtility.SK_MercUtility"))) CarbineAsset=Utility;
     LauncherAsset=LoadObject<USkeletalMesh>(nullptr,TEXT("/Game/Characters/Equipment/SK_Launcher.SK_Launcher"));
     CarbineFire=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Equipment/CarbineFire.CarbineFire"));
+    if (auto* UtilityFire=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/UtilityRifle/MercUtilityFire.MercUtilityFire"))) CarbineFire=UtilityFire;
     LauncherFire=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Equipment/LauncherFire.LauncherFire"));
-    for (const TCHAR* Name:{TEXT("SpyHold"),TEXT("MercHold"),TEXT("SpySnap"),TEXT("MercSnap"),TEXT("SpyKick"),TEXT("MercKick"),TEXT("SpyGrenade"),TEXT("MercGrenade")})
+    MercPanic=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Grab/MercPanic.MercPanic"));
+    SpyChokeExit=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Grab/SpyChokeExit.SpyChokeExit"));
+    MercChokeFall=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Grab/MercChokeFall.MercChokeFall"));
+    for (const TCHAR* Name:{TEXT("SpyHold"),TEXT("MercHold"),TEXT("SpySnap"),TEXT("MercSnap"),TEXT("SpyBackChoke"),TEXT("MercBackChoke"),TEXT("SpyGrenade"),TEXT("MercGrenade")})
         GrabClips.Add(LoadObject<UAnimSequence>(nullptr,*FString::Printf(TEXT("/Game/Characters/Grab/%s.%s"),Name,Name)));
     SpyEquip=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Equipment/SpyEquip.SpyEquip"));
     MercEquip=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Equipment/MercEquip.MercEquip"));
+    if (auto* UtilityEquip=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/UtilityRifle/MercUtilityEquip.MercUtilityEquip"))) MercEquip=UtilityEquip;
     MercThrow=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Actions/MercThrow.MercThrow"));
     SpyRopeClip=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Actions/SpyRope.SpyRope"));
     SpyVentEntry=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Actions/SpyVentEntry.SpyVentEntry"));
     MercKnockout=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Actions/MercKnockout.MercKnockout"));
     MercEquipView=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Actions/MercEquipView.MercEquipView"));
+    if (auto* UtilityView=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/UtilityRifle/MercUtilityEquipView.MercUtilityEquipView"))) MercEquipView=UtilityView;
     MercThrowView=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Actions/MercThrowView.MercThrowView"));
     SpyVentCrawl=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Actions/SpyVentCrawl.SpyVentCrawl"));
     SpyVentIdle=LoadObject<UAnimSequence>(nullptr,TEXT("/Game/Characters/Actions/SpyVentIdle.SpyVentIdle"));
@@ -138,7 +146,7 @@ void ASPCharacter::BeginPlay()
     {LensMaterial=UMaterialInstanceDynamic::Create(Lens,this);GoggleLeft->SetMaterial(0,LensMaterial);GoggleRight->SetMaterial(0,LensMaterial);}
     GoggleHinge->AttachToComponent(GetMesh(),FAttachmentTransformRules::KeepRelativeTransform);
     for (UStaticMeshComponent* Lens:{GoggleLeft,GoggleRight})
-    {Lens->SetRelativeScale3D(FVector(.027f,.027f,.008f));Lens->SetRelativeRotation(FRotator(90,0,0));}
+    {Lens->SetRelativeScale3D(FVector(.027f,.027f,.008f));Lens->SetRelativeRotation(FRotator(0,0,90));}
     // Lens positions and pivot are in the skeletal mesh's reference coordinates.
     GoggleLeft->SetRelativeLocation(FVector(-5.6f,20.f-11.f,168.5f-174.f));
     GoggleRight->SetRelativeLocation(FVector(5.6f,20.f-11.f,168.5f-174.f));
@@ -236,10 +244,11 @@ void ASPCharacter::Tick(float Delta)
     if (!bRoleConfigured || bConfiguredSpy!=IsSpy()) ConfigureRole();
     const bool HasMesh=GetMesh()->GetSkeletalMeshAsset()!=nullptr;
     Body->SetVisibility(Health>0 && !HasMesh);Head->SetVisibility(Health>0 && !HasMesh);
-    GetMesh()->SetVisibility(Health>0);Mask->SetVisibility(Health>0 && HasMesh && !bUsesMeshyAppearance);Vest->SetVisibility(Health>0 && HasMesh && !IsSpy() && !bUsesMeshyAppearance);
+    GetMesh()->SetVisibility(Health>0 || IsChokeCorpse());Mask->SetVisibility(Health>0 && HasMesh && !bUsesMeshyAppearance);Vest->SetVisibility(Health>0 && HasMesh && !IsSpy() && !bUsesMeshyAppearance);
     Gun->SetVisibility(false);
     UpdateEquipment(Delta);
-    Flashlight->SetWorldLocation(Camera->GetComponentLocation()+GetBaseAimRotation().Vector()*25.f);
+    const USkeletalMeshComponent* LightGun=IsLocallyControlled() && FirstPersonWeapon->IsVisible()?FirstPersonWeapon:HeldWeapon;
+    Flashlight->SetWorldLocation(!IsSpy() && WeaponReady() && LightGun->DoesSocketExist(TEXT("flashlight"))?LightGun->GetSocketLocation(TEXT("flashlight")):Camera->GetComponentLocation()+GetBaseAimRotation().Vector()*25.f);
     Flashlight->SetWorldRotation(GetBaseAimRotation());Flashlight->SetVisibility(bFlashlight && !IsSpy() && Health>0);
     const ASPGameState* PracticeState=GetWorld()->GetGameState<ASPGameState>();
     InspectionLight->SetVisibility(bInspectAppearance && PracticeState && PracticeState->bPractice && IsLocallyControlled());
@@ -252,12 +261,12 @@ void ASPCharacter::Tick(float Delta)
         Camera->PostProcessSettings.bOverride_AutoExposureBias=true;
         Camera->PostProcessSettings.AutoExposureBias=bNightVision?3.f:(IsInsideVent()?-1.5f:0.f);
     }
-    GetCharacterMovement()->MaxWalkSpeed=(IsStunned() || (IsRestrained() && (!IsCaptor() || IsFinishing())))?0.f:(IsCaptor()?GrabMoveSpeed:(IsSpy()?SpySpeed:MercSpeed));
+    GetCharacterMovement()->MaxWalkSpeed=(IsStunned() || BlocksGrabInput())?0.f:(IsCaptor()?GrabMoveSpeed:(IsSpy()?SpySpeed:MercSpeed));
     if (bCameraView && (!IsValid(DeployedCamera) || !IsRoundActive() || IsStunned() || Traversal()->IsTraversing())) ResetCameraView();
     if (bCameraView) DeployedCamera->Zoom((bCameraZoomOut?1.f:0.f)-(bCameraZoomIn?1.f:0.f),Delta);
     if (HasAuthority() && (!IsRoundActive() || IsStunned() || Traversal()->IsTraversing() || ServerViewedCamera.Get()!=DeployedCamera)) ServerViewedCamera.Reset();
     UpdateAnimation(Delta);
-    if (HasAuthority() && IsRoundActive() && GetVelocity().Size2D()>35 && GetCharacterMovement()->IsMovingOnGround())
+    if (HasAuthority() && IsRoundActive() && !bIsCrouched && GetVelocity().Size2D()>120.f && GetCharacterMovement()->IsMovingOnGround())
     {
         StepClock+=Delta;
         if (StepClock>(bIsCrouched?.65f:.42f)) {StepClock=0;MulticastSound(StepSound,GetActorLocation());}
@@ -266,6 +275,7 @@ void ASPCharacter::Tick(float Delta)
 void ASPCharacter::UpdateAnimation(float Delta)
 {
     if (!GetMesh()->GetSkeletalMeshAsset() || Clips.Num()<8) return;
+    if (IsChokeCorpse()) GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     const bool Falling=GetCharacterMovement()->IsFalling();
     if (bWasFalling && !Falling) LandingClock=.22f;
     bWasFalling=Falling;LandingClock=FMath::Max(0.f,LandingClock-Delta);
@@ -291,25 +301,31 @@ void ASPCharacter::UpdateAnimation(float Delta)
         if (Traversal()->Motion.bEnteringVent && SpyVentEntry)
         {Anim->Locomotion=SpyVentEntry;Anim->EquipmentWeight=0;Anim->bExplicitLocomotion=true;Anim->ExplicitLocomotionTime=Traversal()->Motion.VentPhaseTime+FMath::Clamp(ServerNow()-Traversal()->Motion.ServerStart,0.f,Traversal()->Motion.Duration);Anim->bLoopLocomotion=false;}
         if (IsKnockedOut() && MercKnockout)
-        {Anim->Locomotion=MercKnockout;Anim->EquipmentWeight=0;Anim->ThrowWeight=0;Anim->bExplicitLocomotion=true;Anim->ExplicitLocomotionTime=FMath::Min(.8f,ServerNow()-Knockout.StartedAt);Anim->bLoopLocomotion=false;}
+        {Anim->Locomotion=Knockout.bForwardCollapse && MercChokeFall?MercChokeFall:MercKnockout;Anim->EquipmentWeight=0;Anim->ThrowWeight=0;Anim->bExplicitLocomotion=true;Anim->ExplicitLocomotionTime=FMath::Min(.8f,ServerNow()-Knockout.StartedAt);Anim->bLoopLocomotion=false;}
         else if (IsGettingUp() && MercKnockout)
-        {Anim->Locomotion=MercKnockout;Anim->EquipmentWeight=0;Anim->ThrowWeight=0;Anim->bExplicitLocomotion=true;Anim->ExplicitLocomotionTime=.8f*(1.f-FMath::Clamp((ServerNow()-RecoveryShield.GetUpAt)/MercGetUpSeconds,0.f,1.f));Anim->bLoopLocomotion=false;}
-        if (IsRestrained() && GrabClips.Num()==8)
+        {Anim->Locomotion=RecoveryShield.bForwardCollapse && MercChokeFall?MercChokeFall:MercKnockout;Anim->EquipmentWeight=0;Anim->ThrowWeight=0;Anim->bExplicitLocomotion=true;Anim->ExplicitLocomotionTime=.8f*(1.f-FMath::Clamp((ServerNow()-RecoveryShield.GetUpAt)/MercGetUpSeconds,0.f,1.f));Anim->bLoopLocomotion=false;}
+        if (IsChokeCorpse() && MercChokeFall)
+        {Anim->Locomotion=MercChokeFall;Anim->EquipmentWeight=0;Anim->ThrowWeight=0;Anim->bExplicitLocomotion=true;Anim->ExplicitLocomotionTime=FMath::Min(.8f,ServerNow()-ChokeDeathAt);Anim->bLoopLocomotion=false;}
+        if (IsChokeExiting() && SpyChokeExit)
+        {Anim->Locomotion=SpyChokeExit;Anim->EquipmentWeight=0;Anim->ThrowWeight=0;Anim->bExplicitLocomotion=true;Anim->ExplicitLocomotionTime=ServerNow()-ChokeExitAt;Anim->bLoopLocomotion=false;}
+        if (IsPanicking() && MercPanic)
+        {Anim->Locomotion=MercPanic;Anim->EquipmentWeight=0;Anim->ThrowWeight=0;Anim->bExplicitLocomotion=true;Anim->ExplicitLocomotionTime=FMath::Fmod(FMath::Max(0.f,ServerNow()-PanicStartedAt),1.f);Anim->bLoopLocomotion=true;}
+        if (IsRestrained() && !IsChokeVictim() && GrabClips.Num()==8)
         {
             if (IsFinishing())
             {
-                const int32 Offset=Grab.Finisher==ESPFinisher::NeckSnap?2:Grab.Finisher==ESPFinisher::Kick?4:6;
+                const int32 Offset=Grab.Finisher==ESPFinisher::NeckSnap?2:Grab.Finisher==ESPFinisher::BackChoke?4:6;
                 if (GrabClips[Offset+(IsCaptor()?0:1)])
                 {Anim->Locomotion=GrabClips[Offset+(IsCaptor()?0:1)];Anim->EquipmentWeight=0;Anim->bExplicitLocomotion=true;Anim->ExplicitLocomotionTime=ServerNow()-Grab.FinishStartedAt;Anim->bLoopLocomotion=false;}
             }
             else if (GrabClips[IsCaptor()?0:1])
-            {Anim->Equipment=GrabClips[IsCaptor()?0:1];Anim->EquipmentWeight=1;Anim->EquipmentTime=0;}
+            {Anim->Throw=GrabClips[IsCaptor()?0:1];Anim->ThrowWeight=1;Anim->ThrowTime=0;Anim->EquipmentWeight=0;}
         }
     }
     if (const auto* Source=Cast<USPEquipmentAnimInstance>(GetMesh()->GetAnimInstance()))
         if (auto* View=Cast<USPEquipmentAnimInstance>(FirstPersonArms->GetAnimInstance()))
         {
-            View->Locomotion=Source->Locomotion;View->Equipment=(!IsSpy() && !IsRestrained() && MercEquipView)?MercEquipView:Source->Equipment;View->EquipmentTime=Source->EquipmentTime;View->EquipmentWeight=Source->EquipmentWeight;
+            View->Locomotion=Source->Locomotion;View->Equipment=(!IsSpy() && !BlocksGrabCombat() && MercEquipView)?MercEquipView:Source->Equipment;View->EquipmentTime=Source->EquipmentTime;View->EquipmentWeight=Source->EquipmentWeight;
             View->Throw=MercThrowView?MercThrowView:Source->Throw;View->ThrowTime=Source->ThrowTime;View->ThrowWeight=Source->ThrowWeight;
             View->LocomotionRate=Source->LocomotionRate;View->bLoopLocomotion=Source->bLoopLocomotion;View->bExplicitLocomotion=true;View->ExplicitLocomotionTime=Source->bExplicitLocomotion?Source->ExplicitLocomotionTime:Source->LocomotionTime();
         }
@@ -389,17 +405,17 @@ void ASPCharacter::Move(const FInputActionValue& Value)
 {
     if (Traversal()->IsOnRope())
     {const float Axis=Value.Get<FVector2D>().Y;if (ServerNow()-LastRopeInputSent>.07f || FMath::Abs(Axis)<.1f) {LastRopeInputSent=ServerNow();ServerRopeInput(Axis);}return;}
-    if (!IsRoundActive() || !Controller || Traversal()->IsTraversing() || IsStunned() || (IsRestrained() && (!IsCaptor() || IsFinishing())) || bCameraView) return;
+    if (!IsRoundActive() || !Controller || Traversal()->IsTraversing() || IsStunned() || BlocksGrabInput() || bCameraView) return;
     FVector2D V=Value.Get<FVector2D>();FRotator R(0,Controller->GetControlRotation().Yaw,0);
     AddMovementInput(R.Vector(),V.Y);AddMovementInput(FRotationMatrix(R).GetUnitAxis(EAxis::Y),V.X);
 }
 void ASPCharacter::Look(const FInputActionValue& Value)
-{if (IsKnockedOut() || (IsRestrained() && (!IsCaptor() || IsFinishing()))) return;const FVector2D V=Value.Get<FVector2D>();
+{if (IsStunned() || BlocksGrabInput()) return;const FVector2D V=Value.Get<FVector2D>();
     if (bCameraView && IsValid(DeployedCamera)) {DeployedCamera->Look(V.X,V.Y);return;}
     const float Scale=IsAiming()?AimSensitivity:1.f;AddControllerYawInput(V.X*Scale);AddControllerPitchInput(V.Y*Scale);}
 void ASPCharacter::LookGamepad(const FInputActionValue& Value)
 {
-    if (IsKnockedOut() || (IsRestrained() && (!IsCaptor() || IsFinishing()))) return;
+    if (IsStunned() || BlocksGrabInput()) return;
     const FVector2D V=Value.Get<FVector2D>();const float Scale=GetWorld()->GetDeltaSeconds()*(IsAiming()?AimSensitivity:1.f);
     if (bCameraView && IsValid(DeployedCamera))
     {DeployedCamera->Look(V.X*ControllerYawRate*Scale,V.Y*ControllerPitchRate*Scale*(bInvertControllerY?1.f:-1.f));return;}
@@ -414,7 +430,7 @@ void ASPCharacter::InspectAppearance()
     bInspectAppearance=!bInspectAppearance;
     ConfigureRole();
 }
-void ASPCharacter::AimPressed() {if (IsRestrained()) return;if (bCameraView) {bCameraZoomIn=true;return;}bAiming=WeaponState.Mode!=ESPWeapon::Hands && IsRoundActive() && !IsStunned();}
+void ASPCharacter::AimPressed() {if (BlocksGrabCombat()) return;if (bCameraView) {bCameraZoomIn=true;return;}bAiming=WeaponState.Mode!=ESPWeapon::Hands && IsRoundActive() && !IsStunned();}
 void ASPCharacter::AimReleased() {bAiming=false;bCameraZoomIn=false;}
 float ASPCharacter::GogglePitch() const {return GoggleAngle;}
 float ASPCharacter::CameraDistance() const {return Boom->TargetArmLength;}
@@ -504,7 +520,7 @@ void ASPCharacter::ServerAttack_Implementation()
 {
     if (IsThrowingGrenade()) return;
     if (IsCaptor()) {ServerFinishInput(true);return;}
-    if (IsRestrained() || ServerViewedCamera.IsValid()) return;
+    if (BlocksGrabCombat() || ServerViewedCamera.IsValid()) return;
     if (IsSpy() && WeaponMode()==ESPWeapon::Hands) return;
     FireEquippedWeapon(false);
 }
@@ -517,7 +533,7 @@ void ASPCharacter::ServerUseGadget_Implementation()
 }
 void ASPCharacter::FireEquippedWeapon(bool bGadgetShot)
 {
-    if (!IsRoundActive() || !Controller || IsRestrained() || Traversal()->IsTraversing() || IsStunned()) return;
+    if (!IsRoundActive() || !Controller || BlocksGrabCombat() || Traversal()->IsTraversing() || IsStunned()) return;
     if (WeaponState.Mode!=ESPWeapon::Hands && !WeaponReady()) return;
     if (!IsSpy() && WeaponState.Mode!=ESPWeapon::Carbine) return;
     if (bGadgetShot && (!IsSpy() || WeaponState.Mode!=ESPWeapon::Taser)) return;
@@ -527,7 +543,7 @@ void ASPCharacter::FireEquippedWeapon(bool bGadgetShot)
     const bool Ranged=WeaponState.Mode!=ESPWeapon::Hands;
     if (Ranged) {Eye=Camera->GetComponentLocation();Aim=GetBaseAimRotation();}
     if (WeaponState.Mode!=ESPWeapon::Hands) {if (!IsSpy() && HasRecoveryShield()) ++RecoveryShotsFired;MulticastSound(ShotSound,Eye);MulticastWeaponFire();}
-    FCollisionQueryParams Q(SCENE_QUERY_STAT(Weapon),false,this);FHitResult Hit;
+    FCollisionQueryParams Q(SCENE_QUERY_STAT(Weapon),false,this);if (IsChokeVictim()) Q.AddIgnoredActor(Grab.Partner);FHitResult Hit;
     const float Range=IsSpy()?(WeaponState.Mode==ESPWeapon::Hands?TakedownReach:(bGadgetShot?2500.f:TaserRange)):5000.f;
     GetWorld()->LineTraceSingleByChannel(Hit,Eye,Eye+Aim.Vector()*Range,ECC_Visibility,Q);
     // Camera aiming chooses the reticle target; a second trace prevents firing through nearby cover.
@@ -585,7 +601,7 @@ float ASPCharacter::TakeDamage(float Amount,const FDamageEvent& Event,AControlle
     const float Applied=FMath::Min(Health,Amount);Health-=Applied;ForceNetUpdate();ClientFeedback(TEXT("Taking damage"));
     if (Health<=0)
     {
-        ClearKnockout();ClearSpyBulletSensors();bInteractHeld=false;bFlashlight=false;bNightVision=false;SetWeapon(ESPWeapon::Hands);if (DeployedCamera) DeployedCamera->Destroy();Traversal()->Drop();GetCharacterMovement()->StopMovementImmediately();GetCharacterMovement()->DisableMovement();
+        ClearKnockout();ClearSpyBulletSensors();bInteractHeld=false;bFlashlight=false;bNightVision=false;if (!IsChokeCorpse()) SetWeapon(ESPWeapon::Hands);if (DeployedCamera) DeployedCamera->Destroy();Traversal()->Drop();GetCharacterMovement()->StopMovementImmediately();GetCharacterMovement()->DisableMovement();
         const TWeakObjectPtr<AController> PC(Controller);FTimerHandle Handle;
         GetWorldTimerManager().SetTimer(Handle,FTimerDelegate::CreateWeakLambda(this,[this,PC]()
         {if (PC.IsValid()) if (ASPGameMode* GM=GetWorld()->GetAuthGameMode<ASPGameMode>()) GM->Respawn(PC.Get());}),5,false);
@@ -594,7 +610,7 @@ float ASPCharacter::TakeDamage(float Amount,const FDamageEvent& Event,AControlle
 }
 void ASPCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);DOREPLIFETIME(ASPCharacter,Health);DOREPLIFETIME(ASPCharacter,Knockout);DOREPLIFETIME(ASPCharacter,RecoveryShield);DOREPLIFETIME(ASPCharacter,ThrowStartedAt);DOREPLIFETIME(ASPCharacter,MercGrenades);DOREPLIFETIME(ASPCharacter,bFlashlight);DOREPLIFETIME(ASPCharacter,bNightVision);DOREPLIFETIME(ASPCharacter,WeaponState);DOREPLIFETIME(ASPCharacter,StunnedUntil);DOREPLIFETIME(ASPCharacter,DeployedCamera);DOREPLIFETIME(ASPCharacter,Grab);DOREPLIFETIME(ASPCharacter,GadgetInventory);DOREPLIFETIME(ASPCharacter,TrackedUntil);
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);DOREPLIFETIME(ASPCharacter,Health);DOREPLIFETIME(ASPCharacter,Knockout);DOREPLIFETIME(ASPCharacter,RecoveryShield);DOREPLIFETIME(ASPCharacter,ThrowStartedAt);DOREPLIFETIME(ASPCharacter,PanicStartedAt);DOREPLIFETIME(ASPCharacter,PanicUntil);DOREPLIFETIME(ASPCharacter,MercGrenades);DOREPLIFETIME(ASPCharacter,bFlashlight);DOREPLIFETIME(ASPCharacter,bNightVision);DOREPLIFETIME(ASPCharacter,WeaponState);DOREPLIFETIME(ASPCharacter,StunnedUntil);DOREPLIFETIME(ASPCharacter,DeployedCamera);DOREPLIFETIME(ASPCharacter,Grab);DOREPLIFETIME(ASPCharacter,ChokeExitAt);DOREPLIFETIME(ASPCharacter,ChokeDeathAt);DOREPLIFETIME(ASPCharacter,GadgetInventory);DOREPLIFETIME(ASPCharacter,TrackedUntil);
 }
 
 void ASPCharacter::Exercise(const FString& Action)

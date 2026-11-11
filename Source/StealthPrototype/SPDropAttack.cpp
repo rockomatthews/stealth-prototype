@@ -51,11 +51,11 @@ void ASPCharacter::OnRep_Knockout(FSPKnockout Previous)
         if (Health>0) GetCharacterMovement()->SetMovementMode(MOVE_Walking);
     }
 }
-void ASPCharacter::BeginDropKnockout(ASPCharacter* Spy)
+void ASPCharacter::BeginDropKnockout(ASPCharacter* Spy,bool ForwardCollapse)
 {
     if (!HasAuthority() || IsSpy() || !IsRoundActive() || IsKnockedOut() || HasRecoveryShield() || IsRestrained() || !Spy || !Spy->IsSpy()) return;
     EndGrab();BeforeKnockoutWeapon=WeaponMode();SetWeapon(ESPWeapon::Hands);bFlashlight=false;
-    FSPKnockout Previous=Knockout;Knockout.bActive=true;Knockout.StartedAt=ServerNow();Knockout.Until=ServerNow()+FMath::Clamp(DropKnockoutSeconds,1.f,15.f);
+    FSPKnockout Previous=Knockout;Knockout.bActive=true;Knockout.bForwardCollapse=ForwardCollapse;Knockout.StartedAt=ServerNow();Knockout.Until=ServerNow()+FMath::Clamp(DropKnockoutSeconds,1.f,15.f);
     Knockout.StandLocation=GetActorLocation();Knockout.HalfHeight=GetCapsuleComponent()->GetScaledCapsuleHalfHeight();Knockout.MeshLocation=GetMesh()->GetRelativeLocation();OnRep_Knockout(Previous);ForceNetUpdate();
     ClientFeedback(TEXT("KNOCKED OUT BY DROP ATTACK"));Spy->ClientFeedback(TEXT("DROP KNOCKOUT"));
     Spy->MulticastSound(LoadObject<USoundBase>(nullptr,TEXT("/Game/Characters/Actions/DropImpact.DropImpact")),GetActorLocation());
@@ -68,7 +68,7 @@ void ASPCharacter::ClearKnockout()
     if (Health>0 && !IsSpy())
     {
         if (RecoveryShield.StartedAt<=Knockout.StartedAt) RecoveryShield.StartedAt=ServerNow();
-        RecoveryShield.CapsuleRise=Knockout.HalfHeight-34.f;RecoveryShield.GetUpAt=ServerNow();RecoveryShield.Until=ServerNow()+FMath::Max(RecoveryShieldSeconds,MercGetUpSeconds+1.f);
+        RecoveryShield.bForwardCollapse=Knockout.bForwardCollapse;RecoveryShield.CapsuleRise=Knockout.HalfHeight-34.f;RecoveryShield.GetUpAt=ServerNow();RecoveryShield.Until=ServerNow()+FMath::Max(RecoveryShieldSeconds,MercGetUpSeconds+1.f);
         ClientFeedback(TEXT("RECOVERY SHIELD | Get up and reposition"));
     }
     const FSPKnockout Previous=Knockout;Knockout=FSPKnockout();OnRep_Knockout(Previous);

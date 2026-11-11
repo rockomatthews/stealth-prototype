@@ -1,0 +1,12 @@
+{
+  "Launcher": {
+    "garment_vertices": 2814,
+    "contact_vertices": 5840,
+    "contact_corrections": 189,
+    "worst_before_cm": 0.5540924072265625,
+    "remaining_deeper_than_half_mm": 0,
+    "worst_after_cm": 0,
+    "maximum_bind_corrective_cm": 6.348193817410779,
+    "worst_before_vertices": []
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "engine": "Unreal 5.8.3",
+  "platform": "Mac Apple Silicon",
+  "map": "Warehouse",
+  "passed": 13,
+  "total": 13,
+  "checks": [
+    {
+      "name": "solo merc loads original utility rifle and first-person arms",
+      "passed": true
+    },
+    {
+      "name": "both ready-pose hands align with the actual weapon grip sockets",
+      "passed": true
+    },
+    {
+      "name": "D-pad Up still controls replicated flashlight",
+      "passed": true
+    },
+    {
+      "name": "LT aims with support grip still aligned",
+      "passed": true
+    },
+    {
+      "name": "Y holsters rifle and hides reticle",
+      "passed": true
+    },
+    {
+      "name": "Y restores rifle and new reticle without toggling light",
+      "passed": true
+    },
+    {
+      "name": "RB grenade animation still spends shared stock",
+      "passed": true
+    },
+    {
+      "name": "new ready grip recovers after grenade throw",
+      "passed": true
+    },
+    {
+      "name": "four network worlds use the same rifle asset on both mercs",
+      "passed": true
+    },
+    {
+      "name": "remote merc fires an actual server-accepted shot with replacement rifle",
+      "passed": true
+    },
+    {
+      "name": "remote Y holster replicates to every client",
+      "passed": true
+    },
+    {
+      "name": "remote re-equip restores grip on every client",
+      "passed": true
+    },
+    {
+      "name": "weapon light state converges with lag and loss",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Simulated Xbox inputs; physical controller feel and Xbox console build unverified.",
+    "Local four-client networking; no internet test claimed.",
+    "Warden art rebuild imported after these tests; gameplay testing paused at user request."
+  ],
+  "meshRevision": "Initial functional utility mesh, superseded visually by the Warden rebuild"
+}

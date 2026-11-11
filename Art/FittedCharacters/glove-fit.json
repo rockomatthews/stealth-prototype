@@ -1,0 +1,32 @@
+{
+  "Spy": {
+    "hands": {
+      "r": {
+        "glove_vertices": 2960,
+        "glove_faces": 2831
+      },
+      "l": {
+        "glove_vertices": 2960,
+        "glove_faces": 2831
+      }
+    },
+    "sleeve_vertices_reweighted": 7522,
+    "vertices": 43859,
+    "triangles": 88019
+  },
+  "Merc": {
+    "hands": {
+      "r": {
+        "glove_vertices": 2960,
+        "glove_faces": 2831
+      },
+      "l": {
+        "glove_vertices": 2960,
+        "glove_faces": 2831
+      }
+    },
+    "sleeve_vertices_reweighted": 6718,
+    "vertices": 44298,
+    "triangles": 89353
+  }
+}

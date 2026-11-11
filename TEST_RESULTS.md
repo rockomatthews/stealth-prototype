@@ -1,3 +1,29 @@
+# Contact and deformation repair — November 10, 2026, evening
+
+The earlier visual presentation was rejected: hands penetrated the merc, the support grip was wrong, the face covering looked like an added plate, and the collapse forced incompatible body/foot orientations. Earlier gameplay pass counts did not establish visual quality.
+
+The current Mac Development Editor build succeeds. The focused gameplay suites pass **48/48 specialty checks and 13/13 rifle checks**. The rifle suite initially found a 7.8 cm first-person support-hand gap; the corrected camera shoulder pose passes the original distance thresholds. These checks use injected controller inputs, including four local worlds and selected 100 ms latency / 2% loss cases. They do not certify human controller feel or final character-art quality.
+
+Derived meshes separate the worst fused torso/arm scan bridges; source imports are preserved. The neck hold uses forward shoulder reach and an outside forearm target. The prone fall preserves the hip/knee/ankle chain, and the spy braces and steps to the side of the corpse. Camera arms now use textured source geometry with a dedicated view pose. The spy has a full rounded cloth covering with actual eye openings and a clean independent binocular housing.
+
+The blast adds 14 short-lived emissive fire sprites and, for the planted takedown, 64 ballistic blood particles that deposit on static surfaces. Original authoritative fuse, damage, shared grenade stock, and cleanup rules remain. The source still uses automatic skinning and procedural animation; frame-by-frame visual review is separate from mechanics acceptance.
+
+Evidence: `Saved/SpecialtyQA/contact-build.log`, `Saved/ContactQA/acceptance-specialty.log`, `Saved/ContactQA/acceptance-rifle-fixed.log`, and the dated contact-v3 gameplay recordings under `Art/Actions/Review`.
+
+---
+
+> Art revision in progress: the user rejected the first utility-rifle appearance and paused gameplay testing. The Warden replacement mesh is newer than the rifle checks below; those results do not validate its final appearance or hand contact.
+
+# Utility rifle, specialty holds and quiet movement — November 9, 2026
+
+Unreal 5.8.3 Mac Development Editor build succeeded. **45/45 specialty, 13/13 utility-rifle and 9/9 quiet-movement checks passed** in Warehouse. Tests use simulated Xbox inputs and four local network worlds, including selected checks at 100 ms lag and 2% loss. Physical controller feel and Xbox console execution remain unverified.
+
+Hold RT during an X grab plants a stolen shared-supply grenade or, at zero stock, starts a five-second back choke. The choked merc can move, turn and fire; damage can interrupt the spy. The grenade fuse continues after release or spy death. Tap RT retains the quick finish. See [SPECIALTY_TAKEDOWNS.md](SPECIALTY_TAKEDOWNS.md).
+
+The original larger merc rifle has skeletal recoil, support-hand IK, forearm-weighted first-person sleeves, a weapon-mounted flashlight and an amber broken-ring reticle. Crouch and gentle analog movement are silent; fast steps produce directional client cues. See [UTILITY_RIFLE.md](UTILITY_RIFLE.md). First-person arms/materials and animation contact remain prototype quality, not finished character art.
+
+The supplied video is a PC Enhanced match. Preserve Xbox bindings and prompts: Y draw/holster only, X grab, D-pad Up goggles/flashlight. Hacking expansion is deferred. Camouflage, mines, full detection modes and finite rifle ammunition/reload remain pending; see [REFERENCE_GAMEPLAY.md](REFERENCE_GAMEPLAY.md). Compact test evidence is in Validation/specialty-takedowns.json, utility-rifle.json and quiet-movement.json.
+
 # Merc recovery electricity — November 7, 2026
 
 The Unreal 5.8.3 Mac Development Editor build succeeded. **29/29 recovery-shield, 80/80 knockout regression and 46/46 warehouse checks passed.** The current appears near the end of unconsciousness; a 0.8-second get-up transition then starts a three-second shield window, leaving about 2.2 seconds of protected movement and firing. Repeat drop knockouts and rear grabs are rejected on the server. Landing spies are pushed away without health damage; ordinary damage still applies.
@@ -351,3 +377,11 @@ No physical controller, real second person, internet session or Xbox console har
 Visual review confirmed the corrected prone body in a remote merc view and boot placement near the vent. Camera-only sleeves and separate view poses avoid the previous near-camera sleeve sheets. Captured owner/observer throw frames and their runtime timestamps are under `Saved/WarehouseQA/throw-*.png` / `throw-*.json`. These remain prototype animations requiring human movement/appearance review. A Mac memory-pressure notice occurred during the later four-client review; the editor was restarted before returning to one client.
 
 The final first-person visibility correction keeps the throwing arms raised independently of gun lowering. Full-viewport captures at 0.13, 0.19 and 0.42 seconds show the grenade/hand trajectory; all three sampled hand positions pass a conservative 16:9 framing check with a 5 cm margin. Release still spends one shared grenade and recovery restores the carbine view. The owner-only mesh uses expanded bounds to prevent near-camera animation culling.
+
+## November 10, 2026 — takedown presentation and lethal choke
+
+Mac Development Editor build succeeded. Final compiled build passed 48 specialty checks, 3 late-rescue checks and 13 rifle/controller regression checks (64 total). Rescue damage at 4.967 seconds prevented death and a false dismount, and both owned voice-pair tokens were cleared.
+
+The five-second ride now kills by strangulation. A visible merc corpse falls while the spy disengages; automatic transitions preserve the drawn, reduced-scale rifle. First-person collapse camera follows the fall. Grenade pin-pull timing, shared inventory, cover/damage, interruptions, round cleanup and 100 ms / 2% network emulation were checked. The blast now uses 11 textured cosmetic body fragments with pawn/trace collision disabled.
+
+Actual silent gameplay recordings and hashes: `Validation/takedown-polish-2026-11-10.json`. Character deformation and facial detail remain prototype quality; hardware controller feel and Xbox console/internet play are not established by these tests. No external sounds or models downloaded.

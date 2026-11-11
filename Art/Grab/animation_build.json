@@ -19,24 +19,39 @@
     "frames": 27,
     "bones": 88
   },
-  "SpyKick": {
-    "seconds": 3.1,
-    "frames": 94,
+  "SpyBackChoke": {
+    "seconds": 5.0,
+    "frames": 151,
     "bones": 88
   },
-  "MercKick": {
-    "seconds": 3.1,
-    "frames": 94,
+  "MercBackChoke": {
+    "seconds": 5.0,
+    "frames": 151,
     "bones": 88
   },
   "SpyGrenade": {
-    "seconds": 3.8,
-    "frames": 115,
+    "seconds": 2.8,
+    "frames": 85,
     "bones": 88
   },
   "MercGrenade": {
-    "seconds": 3.8,
-    "frames": 115,
+    "seconds": 2.8,
+    "frames": 85,
+    "bones": 88
+  },
+  "SpyChokeExit": {
+    "seconds": 1.6,
+    "frames": 49,
+    "bones": 88
+  },
+  "MercChokeFall": {
+    "seconds": 0.8,
+    "frames": 25,
+    "bones": 88
+  },
+  "MercPanic": {
+    "seconds": 1.0,
+    "frames": 31,
     "bones": 88
   }
 }

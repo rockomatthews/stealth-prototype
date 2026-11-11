@@ -37,7 +37,9 @@ def start(count):
     call(app_tool,'StartPIE',options={'bSimulate':False,'playMode':'PlayMode_InEditorFloating','warmupSeconds':2})
     action(0,'automation_on');time.sleep(.25)
 def stop():
-    if call(app_tool,'IsPIERunning'):call(app_tool,'StopPIE')
+    if call(app_tool,'IsPIERunning'):
+        time.sleep(1) # Let the last captured Slate viewport frame retire before teardown.
+        call(app_tool,'StopPIE')
 
 def wait_for(predicate,seconds=12):
     end=time.monotonic()+seconds
@@ -114,7 +116,7 @@ if __name__=='__main__':
     check('merc lands after ordinary jump',lambda:wait_for(lambda d:local_pawn(d)['z']<100))
     action(0,'place_ledge');time.sleep(.6);action(0,'traverse');time.sleep(.5)
     check('merc server rejects ledge traversal',lambda:wait_for(lambda d:local_pawn(d)['traversal']==0 and local_pawn(d)['z']<100))
-    check('merc uses rigged first-person carbine',lambda:wait_for(lambda d:'/SK_Carbine.' in local_pawn(d)['equipment']['weaponMesh'] and local_pawn(d)['equipment']['firstPersonWeapon'] and local_pawn(d)['equipment']['firstPersonArms'] and local_pawn(d)['equipment']['gripDistance']<2))
+    check('merc uses rigged first-person carbine',lambda:wait_for(lambda d:'/SK_MercUtility.' in local_pawn(d)['equipment']['weaponMesh'] and local_pawn(d)['equipment']['firstPersonWeapon'] and local_pawn(d)['equipment']['firstPersonArms'] and local_pawn(d)['equipment']['gripDistance']<2))
     pad(0,'y')
     check('merc Y holsters carbine without toggling flashlight',lambda:wait_for(lambda d:local_pawn(d)['equipment']['weapon']==0 and not local_pawn(d)['equipment']['firstPersonWeapon'] and not local_pawn(d)['flashlight']))
     time.sleep(.7);pad(0,'y')

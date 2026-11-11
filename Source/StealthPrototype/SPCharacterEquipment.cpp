@@ -1,4 +1,5 @@
 #include "Prototype.h"
+#include "SPHandContacts.h"
 #include "EngineUtils.h"
 #include "Camera/CameraComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -77,7 +78,7 @@ float ASPCharacter::ServerNow() const
     const AGameStateBase* State=GetWorld()->GetGameState();
     return State?State->GetServerWorldTimeSeconds():GetWorld()->GetTimeSeconds();
 }
-bool ASPCharacter::IsStunned() const {return Health>0 && (StunnedUntil>ServerNow() || IsKnockedOut() || IsGettingUp());}
+bool ASPCharacter::IsStunned() const {return Health>0 && (StunnedUntil>ServerNow() || IsPanicking() || IsKnockedOut() || IsGettingUp() || IsChokeExiting());}
 bool ASPCharacter::WeaponReady() const
 {
     return WeaponState.Mode!=ESPWeapon::Hands && ServerNow()-WeaponState.ChangedAt>=EquipDuration && !Traversal()->IsTraversing() && !IsStunned() && Health>0;
@@ -94,7 +95,7 @@ void ASPCharacter::OnRep_Weapon() {bAiming=false;ResetCameraView();}
 void ASPCharacter::SwitchWeapon() {ServerSwitchWeapon();}
 void ASPCharacter::ServerSwitchWeapon_Implementation()
 {
-    if (!IsRoundActive() || IsThrowingGrenade() || IsRestrained() || IsStunned() || Traversal()->IsTraversing() || ServerNow()-WeaponState.ChangedAt<EquipDuration) return;
+    if (!IsRoundActive() || IsThrowingGrenade() || BlocksGrabCombat() || IsStunned() || Traversal()->IsTraversing() || ServerNow()-WeaponState.ChangedAt<EquipDuration) return;
     const ESPWeapon Next=IsSpy()?(WeaponState.Mode==ESPWeapon::Hands?ESPWeapon::Taser:ESPWeapon::Hands):
         (WeaponState.Mode==ESPWeapon::Carbine?ESPWeapon::Hands:ESPWeapon::Carbine);
     SetWeapon(Next);
@@ -131,19 +132,32 @@ void ASPCharacter::MulticastWeaponFire_Implementation()
 }
 void ASPCharacter::UpdateEquipment(float Delta)
 {
-    const bool Alive=Health>0;
+    const bool Alive=Health>0;const bool CarryCorpseRifle=IsChokeCorpse();
     const float Progress=FMath::Clamp((ServerNow()-WeaponState.ChangedAt)/EquipDuration,0.f,1.f);
     const float Target=WeaponState.Mode==ESPWeapon::Hands?1.f-Progress:Progress;
-    EquipAlpha=Alive && !IsKnockedOut() && !IsRestrained() && !Traversal()->IsTraversing()?Target:0.f;
+    EquipAlpha=Alive && !IsKnockedOut() && !IsPanicking() && !BlocksGrabCombat() && !Traversal()->IsTraversing()?Target:0.f;
+    if ((!IsSpy() && IsRestrained() && !IsChokeVictim()) || CarryCorpseRifle) EquipAlpha=1.f; // Visible carried rifle; firing is still blocked by the hold.
     const bool Throwing=IsThrowingGrenade();const float ThrowT=ServerNow()-ThrowStartedAt;
     if (Throwing) EquipAlpha*=ThrowT<.12f?1.f-ThrowT/.12f:FMath::Clamp((ThrowT-.72f)/.246667f,0.f,1.f);
     const bool HoldingGrenade=Throwing && ThrowT>=.125f && ThrowT<.42f;
+    float ClothR=EquipAlpha,ClothL=EquipAlpha;
+    if (IsSpy())
+    {
+        ClothR=ClothL=IsCaptor()?1.f:IsChokeExiting()?1.f-FMath::Clamp((ServerNow()-ChokeExitAt)/1.6f,0.f,1.f):0.f;
+        if (IsCaptor() && Grab.Finisher==ESPFinisher::Grenade)
+        {const float T=ServerNow()-Grab.FinishStartedAt;ClothR*=1.f-FMath::SmoothStep(.05f,.55f,T);ClothL*=1.f-FMath::SmoothStep(2.05f,2.8f,T);}
+    }
+    GetMesh()->SetMorphTarget(TEXT("ContactClothR"),ClothR);GetMesh()->SetMorphTarget(TEXT("ContactClothL"),ClothL);
+    FirstPersonArms->SetMorphTarget(TEXT("ContactClothR"),IsSpy()?0.f:ClothR);FirstPersonArms->SetMorphTarget(TEXT("ContactClothL"),IsSpy()?0.f:ClothL);
+
+    GetMesh()->SetMorphTarget(TEXT("LauncherGripR"),IsSpy()?EquipAlpha:0.f);GetMesh()->SetMorphTarget(TEXT("LauncherGripL"),IsSpy()?EquipAlpha:0.f);
     WorldThrowGrenade->SetOwnerNoSee(!bInspectAppearance);WorldThrowGrenade->SetVisibility(HoldingGrenade);
     FirstPersonThrowGrenade->SetVisibility(HoldingGrenade && !bInspectAppearance);
     Recoil=FMath::FInterpTo(Recoil,0.f,Delta,18.f);
     const bool Armed=WeaponState.Mode!=ESPWeapon::Hands;
     const bool ThirdPerson=IsSpy() || bInspectAppearance;
-    if (!IsSpy() && !bInspectAppearance) {float Height=IsKnockedOut()?0.f:60.f;if (IsGettingUp()) {const float T=FMath::Clamp((ServerNow()-RecoveryShield.GetUpAt)/MercGetUpSeconds,0.f,1.f);Height=FMath::Lerp(-RecoveryShield.CapsuleRise,60.f,T*T*(3.f-2.f*T));}Boom->SetRelativeLocation(FVector(0,0,Height));}
+    if (!IsSpy() && !bInspectAppearance) {float Height=IsKnockedOut()?0.f:60.f;if (IsGettingUp()) {const float T=FMath::Clamp((ServerNow()-RecoveryShield.GetUpAt)/MercGetUpSeconds,0.f,1.f);Height=FMath::Lerp(-RecoveryShield.CapsuleRise,60.f,T*T*(3.f-2.f*T));}if (CarryCorpseRifle) {const float T=FMath::Clamp((ServerNow()-ChokeDeathAt)/.8f,0.f,1.f);const float W=T*T*(3.f-2.f*T);Boom->SetRelativeLocation(FMath::Lerp(FVector(0,0,60),FVector(70,0,-55),W));}
+        else Boom->SetRelativeLocation(FVector(0,0,Height));}
     if (IsSpy() && !bInspectAppearance)
     {const bool Vent=IsInsideVent();Boom->TargetArmLength=FMath::FInterpTo(Boom->TargetArmLength,Vent?95.f:SpyCameraDistance,Delta,8.f);Boom->SetRelativeLocation(FVector(0,0,FMath::FInterpTo(Boom->GetRelativeLocation().Z,Vent?12.f:60.f,Delta,8.f)));}
     bUseControllerRotationYaw=!IsKnockedOut() && (IsCaptor() || !ThirdPerson || (IsSpy() && Armed && !bInspectAppearance));
@@ -161,9 +175,9 @@ void ASPCharacter::UpdateEquipment(float Delta)
     for (int32 I=0;I<2;++I)
     {
         UStaticMeshComponent* Lens=I==0?GoggleLeft:GoggleRight;
-        const FVector Down(I==0?-5.6f:5.6f,13.2f,-5.5f);
+        const FVector Down(I==0?-5.6f:5.6f,13.6f,-5.5f);
         Lens->SetRelativeLocation(Flip.RotateVector(Down));
-        Lens->SetRelativeRotation((Flip*FRotator(90,0,0).Quaternion()).Rotator());
+        Lens->SetRelativeRotation((Flip*FRotator(0,0,90).Quaternion()).Rotator());
         Lens->SetVisibility(Alive && IsSpy() && bNightVision && GoggleAngle>-12.f);
     }
     if (LensMaterial) LensMaterial->SetScalarParameterValue(TEXT("Enabled"),Alive && bNightVision?1.f:0.f);
@@ -173,15 +187,19 @@ void ASPCharacter::UpdateEquipment(float Delta)
     if (HeldWeapon->GetSkeletalMeshAsset()!=Asset) {HeldWeapon->SetSkeletalMesh(Asset);FirstPersonWeapon->SetSkeletalMesh(Asset);}
     const FTransform Spine=GetMesh()->GetSocketTransform(TEXT("spine_03"));
     const FTransform Back(FRotator(-90,0,0),IsSpy()?FVector(-12,-18,143):FVector(0,-21,128));
-    const FTransform Holstered=Back*SpineReference.Inverse()*Spine;
+    FTransform Holstered=Back*SpineReference.Inverse()*Spine;
+    const float WeaponScale=IsSpy()?1.f:MercRifleScale;Holstered.SetScale3D(FVector(WeaponScale));
     const FVector Hand=GetMesh()->GetSocketLocation(TEXT("hand_r"));
     FRotator Aim=bInspectAppearance?GetActorRotation():GetBaseAimRotation();Aim.Pitch+=Recoil*2.5f;
-    const FTransform InHand(Aim,Hand+Aim.Vector()*(IsSpy()?3.f:1.f));
+    const FVector Palm=SPHandContacts::Palm(GetMesh())+Aim.RotateVector(IsSpy()?SPHandContacts::LauncherCenterFromPalm:SPHandContacts::RifleCenterFromPalm);
+    FVector GripLocal=!IsSpy() && HeldWeapon->DoesSocketExist(TEXT("grip"))?HeldWeapon->GetSocketTransform(TEXT("grip"),RTS_Component).GetLocation():FVector::ZeroVector;
+    if (IsSpy()) GripLocal=SPHandContacts::LauncherGripLocal;else GripLocal+=FVector(-4.5f,0,-1.5f); // Center of the sculpted pistol grip.
+    const FTransform InHand(Aim,Palm-Aim.RotateVector(GripLocal*WeaponScale),FVector(WeaponScale));
     FTransform Weapon;Weapon.Blend(Holstered,InHand,EquipAlpha);
     HeldWeapon->SetWorldTransform(Weapon);
     HeldWeapon->SetOwnerNoSee(!ThirdPerson);
-    HeldWeapon->SetVisibility(Alive && Asset);
-    FirstPersonWeapon->SetVisibility(Alive && !IsSpy() && !bInspectAppearance && Armed && !bCameraView && (!Throwing || EquipAlpha>.1f));
+    HeldWeapon->SetVisibility((Alive || CarryCorpseRifle) && Asset);
+    FirstPersonWeapon->SetVisibility(Alive && !IsSpy() && !IsPanicking() && !bInspectAppearance && Armed && !bCameraView && (!Throwing || EquipAlpha>.1f));
     const float AimBlend=IsAiming()?1.f:0.f;
     const FTransform YawFrame(FRotator(0,GetBaseAimRotation().Yaw,0),Camera->GetComponentLocation());
     const FTransform CameraFrame(GetBaseAimRotation(),Camera->GetComponentLocation());
@@ -190,8 +208,11 @@ void ASPCharacter::UpdateEquipment(float Delta)
     const FVector CameraUp=CameraFrame.GetRotation().GetUpVector();
     ArmsTransform.AddToTranslation(CameraFrame.GetRotation().RotateVector(FirstPersonViewOffset)+CameraRight*(-12.f*AimBlend)+CameraUp*(8.f*AimBlend-20.f*(1.f-(Throwing?1.f:EquipAlpha))));
     FirstPersonArms->SetWorldTransform(ArmsTransform);
+    if (HoldingGrenade) {WorldThrowGrenade->SetWorldLocation(SPHandContacts::GrenadeCenter(GetMesh()));FirstPersonThrowGrenade->SetWorldLocation(SPHandContacts::GrenadeCenter(FirstPersonArms));}
     FirstPersonArms->SetVisibility(FirstPersonWeapon->IsVisible() || (Alive && Throwing && !bInspectAppearance));
-    FirstPersonWeapon->SetWorldLocation(FirstPersonArms->GetSocketLocation(TEXT("hand_r"))+Aim.Vector());
+    const FVector ViewPalm=SPHandContacts::Palm(FirstPersonArms)+Aim.RotateVector(IsSpy()?SPHandContacts::LauncherCenterFromPalm:SPHandContacts::RifleCenterFromPalm);
+    FirstPersonWeapon->SetWorldScale3D(FVector(WeaponScale));
+    FirstPersonWeapon->SetWorldLocation(ViewPalm-Aim.RotateVector(GripLocal*WeaponScale));
     FirstPersonWeapon->SetWorldRotation(Aim);
 
 }
@@ -225,6 +246,9 @@ FString ASPCharacter::EquipmentReport() const
         R->SetNumberField(TEXT("noiseCues"),DeployedCamera->NoiseCues);R->SetNumberField(TEXT("gasCues"),DeployedCamera->GasCues);
         R->SetNumberField(TEXT("lastNoiseAt"),DeployedCamera->LastNoiseAt);R->SetNumberField(TEXT("gasReleasedAt"),DeployedCamera->GasReleasedAt);
     }
+    R->SetStringField(TEXT("weaponRotation"),HeldWeapon->GetComponentRotation().ToString());
+    R->SetStringField(TEXT("weaponMuzzleLocal"),HeldWeapon->GetSocketTransform(TEXT("muzzle"),RTS_Component).GetLocation().ToString());
+    R->SetStringField(TEXT("weaponGripLocal"),HeldWeapon->GetSocketTransform(TEXT("grip"),RTS_Component).GetLocation().ToString());
     R->SetStringField(TEXT("weaponMesh"),GetPathNameSafe(HeldWeapon->GetSkeletalMeshAsset()));
     R->SetStringField(TEXT("weaponParent"),HeldWeapon->GetAttachParent()?HeldWeapon->GetAttachParent()->GetName():TEXT("None"));
     R->SetBoolField(TEXT("gogglesIndependent"),GoggleAssembly->GetStaticMesh()!=nullptr);
@@ -233,6 +257,14 @@ FString ASPCharacter::EquipmentReport() const
     R->SetBoolField(TEXT("goggleLights"),GoggleLeft->IsVisible() && GoggleRight->IsVisible());
     R->SetBoolField(TEXT("firstPersonWeapon"),FirstPersonWeapon->IsVisible());
     R->SetBoolField(TEXT("firstPersonArms"),FirstPersonArms->IsVisible() && FirstPersonArms->GetSkeletalMeshAsset()!=nullptr);
-    R->SetNumberField(TEXT("gripDistance"),FVector::Dist(FirstPersonWeapon->GetComponentLocation(),FirstPersonArms->GetSocketLocation(TEXT("hand_r"))));
+    if (HeldWeapon->DoesSocketExist(TEXT("support_grip")))
+    {
+        R->SetNumberField(TEXT("worldSupportDistance"),FVector::Dist(HeldWeapon->GetSocketLocation(TEXT("support_grip"))+HeldWeapon->GetComponentTransform().TransformVector(SPHandContacts::SupportSocketToPalm),(GetMesh()->GetSocketLocation(TEXT("hand_l"))+GetMesh()->GetSocketLocation(TEXT("middle_01_l")))*.5f));
+        R->SetNumberField(TEXT("viewSupportDistance"),FVector::Dist(FirstPersonWeapon->GetSocketLocation(TEXT("support_grip"))+FirstPersonWeapon->GetComponentTransform().TransformVector(SPHandContacts::SupportSocketToPalm),(FirstPersonArms->GetSocketLocation(TEXT("hand_l"))+FirstPersonArms->GetSocketLocation(TEXT("middle_01_l")))*.5f));
+    }
+    const FVector ViewPalm=(FirstPersonArms->GetSocketLocation(TEXT("hand_r"))+FirstPersonArms->GetSocketLocation(TEXT("middle_01_r")))*.5f;
+    const FVector Contact=FirstPersonWeapon->GetSocketLocation(TEXT("grip"))+FirstPersonWeapon->GetComponentTransform().TransformVector(FVector(-4.5f,0,-1.5f));
+    R->SetNumberField(TEXT("gripDistance"),FVector::Dist(Contact,ViewPalm+FirstPersonWeapon->GetComponentQuat().RotateVector(SPHandContacts::RifleCenterFromPalm)));
+    R->SetNumberField(TEXT("rifleScale"),HeldWeapon->GetComponentScale().X);
     FString Text;auto Writer=TJsonWriterFactory<>::Create(&Text);FJsonSerializer::Serialize(R,Writer);return Text;
 }

@@ -65,5 +65,7 @@ for i in range(int(rate*.24)):
 with wave.open(str(OUT/'DropImpact.wav'),'wb') as f:f.setnchannels(1);f.setsampwidth(2);f.setframerate(rate);f.writeframes(b''.join(samples))
 
 # Mantle and vent locomotion are authored together to preserve their handoff.
+throw_script=P/'Scripts/repair_throw_view.py'
+exec(compile(throw_script.read_text(),str(throw_script),'exec'),{'__file__':str(throw_script),'__name__':'__main__'})
 vent_script=P/'Scripts/build_vent_entry.py'
 exec(compile(vent_script.read_text(),str(vent_script),'exec'),{'__file__':str(vent_script),'__name__':'__main__'})

@@ -25,6 +25,11 @@
 #include "Camera/CameraActor.h"
 #include "Camera/CameraComponent.h"
 #include "HAL/IConsoleManager.h"
+#include "ImageUtils.h"
+#include "Engine/GameViewportClient.h"
+#include "Engine/LocalPlayer.h"
+#include "Misc/FileHelper.h"
+#include "HAL/FileManager.h"
 
 FString USPDiagnostics::RuntimeReport()
 {
@@ -33,7 +38,7 @@ FString USPDiagnostics::RuntimeReport()
     {
         UWorld* W=C.World();if (!W || !W->IsGameWorld()) continue;
         const ASPGameState* GS=W->GetGameState<ASPGameState>();if (!GS) continue;
-        TSharedRef<FJsonObject> World=MakeShared<FJsonObject>();World->SetNumberField(TEXT("pie"),C.PIEInstance);
+        TSharedRef<FJsonObject> World=MakeShared<FJsonObject>();World->SetNumberField(TEXT("pie"),C.PIEInstance);World->SetNumberField(TEXT("serverTime"),GS->GetServerWorldTimeSeconds());
         int32 Crates=0;for (TActorIterator<ASPWarehouse> It(W);It;++It) for (const auto& Ref:It->Generated) if (const auto* Cmp=Cast<UHierarchicalInstancedStaticMeshComponent>(Ref.Get())) if (Cmp->GetStaticMesh() && Cmp->GetStaticMesh()->GetName()==TEXT("SM_Crate")) Crates+=Cmp->GetInstanceCount();
         World->SetNumberField(TEXT("crates"),Crates);
         World->SetStringField(TEXT("map"),W->GetMapName());int32 RopeCount=0,VentCount=0,DoorCount=0;bool DoorOpen=false;
@@ -85,7 +90,7 @@ FString USPDiagnostics::RuntimeReport()
             P->SetNumberField(TEXT("bodyOriginZ"),It->GetMesh()->GetComponentLocation().Z);
             P->SetNumberField(TEXT("bodyRelativeZ"),It->GetMesh()->GetRelativeLocation().Z);
 P->SetBoolField(TEXT("onRope"),It->Traversal()->IsOnRope());P->SetBoolField(TEXT("ropeCrouch"),It->Traversal()->Motion.bVentCrouch);
-            P->SetBoolField(TEXT("throwing"),It->IsThrowingGrenade());P->SetNumberField(TEXT("throwTime"),It->ServerNow()-It->ThrowStartedAt);
+            P->SetNumberField(TEXT("lastAttackAt"),It->LastShotTime());P->SetBoolField(TEXT("panicking"),It->IsPanicking());P->SetBoolField(TEXT("chokeVictim"),It->IsChokeVictim());P->SetBoolField(TEXT("chokeExit"),It->IsChokeExiting());P->SetBoolField(TEXT("forwardCollapse"),It->Knockout.bForwardCollapse || It->IsChokeCorpse());P->SetBoolField(TEXT("chokeCorpse"),It->IsChokeCorpse());P->SetBoolField(TEXT("throwing"),It->IsThrowingGrenade());P->SetNumberField(TEXT("throwTime"),It->ServerNow()-It->ThrowStartedAt);
             P->SetNumberField(TEXT("noiseAge"),It->ServerNow()-It->LastHeardNoise);
             P->SetBoolField(TEXT("restrained"),It->IsRestrained());P->SetBoolField(TEXT("captor"),It->IsCaptor());
             if (It->IsCaptor() && It->IsFinishing() && It->Grab.Partner) P->SetNumberField(TEXT("kickContactDistance"),FVector::Dist(It->GetMesh()->GetSocketLocation(TEXT("foot_l")),It->Grab.Partner->GetMesh()->GetSocketLocation(TEXT("head"))));
@@ -118,7 +123,7 @@ P->SetBoolField(TEXT("onRope"),It->Traversal()->IsOnRope());P->SetBoolField(TEXT
             TSharedRef<FJsonObject> G=MakeShared<FJsonObject>();const FVector L=It->GetActorLocation();
             G->SetStringField(TEXT("name"),It->GetName());G->SetBoolField(TEXT("thrown"),It->bThrown);G->SetBoolField(TEXT("exploded"),It->bExploded);
             G->SetNumberField(TEXT("x"),L.X);G->SetNumberField(TEXT("y"),L.Y);G->SetNumberField(TEXT("z"),L.Z);G->SetNumberField(TEXT("age"),GS->GetServerWorldTimeSeconds()-It->ArmedAt);
-            G->SetNumberField(TEXT("bounces"),It->BounceCount);G->SetNumberField(TEXT("ownerId"),It->Captor && It->Captor->GetPlayerState()?It->Captor->GetPlayerState()->GetPlayerId():-1);
+            G->SetBoolField(TEXT("planted"),It->bPlanted);G->SetNumberField(TEXT("bodyFragments"),It->BodyFragmentCount);G->SetNumberField(TEXT("clouds"),It->BlastClouds.Num());G->SetNumberField(TEXT("fireSprites"),It->BlastFire.Num());G->SetNumberField(TEXT("bloodDrops"),It->BlastBlood.Num());G->SetNumberField(TEXT("fuse"),It->FuseSeconds);G->SetNumberField(TEXT("bounces"),It->BounceCount);G->SetNumberField(TEXT("ownerId"),It->Captor && It->Captor->GetPlayerState()?It->Captor->GetPlayerState()->GetPlayerId():-1);
             Grenades.Add(MakeShared<FJsonValueObject>(G));
         }
         World->SetArrayField(TEXT("grenades"),Grenades);World->SetNumberField(TEXT("armedGrenades"),ArmedGrenades);
@@ -245,6 +250,40 @@ FString USPDiagnostics::Exercise(int32 Index,const FString& Action)
             const FRotator R=(Target-(L+FVector(0,0,64))).Rotation();Body->SetActorLocationAndRotation(L,R,false,nullptr,ETeleportType::TeleportPhysics);Observer->SetControlRotation(R);Body->ForceNetUpdate();
             W->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(Observer,[Observer,R](){Observer->ClientSetRotation(R,true);}));return TEXT("Warehouse visual observer placed");
         }
+        if (Action==TEXT("specialty_capture"))
+        {
+            const ULocalPlayer* LP=PC->GetLocalPlayer();FViewport* V=LP && LP->ViewportClient?LP->ViewportClient->Viewport:nullptr;
+            if (!V) return TEXT("Local viewport required");
+            TArray<FColor> Pixels;const FIntPoint Size=V->GetSizeXY();
+            if (!V->ReadPixels(Pixels) || Pixels.Num()!=Size.X*Size.Y) return TEXT("Capture failed");
+            TArray64<uint8> PNG;FImageUtils::PNGCompressImageArray(Size.X,Size.Y,Pixels,PNG);
+            const FString Dir=FPaths::ProjectSavedDir()/TEXT("SpecialtyQA");IFileManager::Get().MakeDirectory(*Dir,true);
+            return FFileHelper::SaveArrayToFile(PNG,*(Dir/TEXT("capture.png")))?TEXT("Specialty viewport captured"):TEXT("Capture save failed");
+        }
+        if (Action==TEXT("utility_review_camera"))
+        {
+            if (Players.Num()!=4 || Index!=0) return TEXT("Four-player review required");
+            const FVector Location(-90,-1950,145),Target(-160,-1750,132);
+            auto* Camera=W->SpawnActor<ACameraActor>(Location,(Target-Location).Rotation());Camera->GetCameraComponent()->SetFieldOfView(38);PC->SetViewTarget(Camera);if (PC->GetHUD()) PC->GetHUD()->bShowHUD=false;return TEXT("Utility grip review camera active");
+        }
+        if (Action==TEXT("face_review_camera") || Action==TEXT("grip_review_camera"))
+        {
+            if (Players.Num()!=1 || Index!=0) return TEXT("Solo presentation review required");
+            const bool Face=Action==TEXT("face_review_camera");
+            const FVector Origin=Pawn->GetActorLocation();
+            const FVector Location=Origin+Pawn->GetActorForwardVector()*(Face?140.f:40.f)+Pawn->GetActorRightVector()*(Face?15.f:220.f)+FVector(0,0,Face?75.f:65.f);
+            const FVector Target=Origin+FVector(0,0,Face?75.f:40.f);
+            auto* Camera=W->SpawnActor<ACameraActor>(Location,(Target-Location).Rotation());Camera->GetCameraComponent()->SetFieldOfView(Face?30.f:40.f);PC->SetViewTarget(Camera);if (PC->GetHUD()) PC->GetHUD()->bShowHUD=false;
+            return TEXT("Solo presentation camera active");
+        }
+        if (Action==TEXT("specialty_review_camera"))
+        {
+            if (Players.Num()!=4 || Index!=0 || !PC->IsLocalController()) return TEXT("Four-player server review only");
+            const FVector Location(-60,-1390,140),Target(-140,-1750,85);
+            auto* Camera=W->SpawnActor<ACameraActor>(Location,(Target-Location).Rotation());
+            Camera->GetCameraComponent()->SetFieldOfView(60);PC->SetViewTarget(Camera);if (PC->GetHUD()) PC->GetHUD()->bShowHUD=false;
+            return TEXT("Specialty animation review camera active");
+        }
         if (Action==TEXT("grab_observer"))
         {
             if (Players.Num()!=4) return TEXT("Four players required");
@@ -261,6 +300,7 @@ FString USPDiagnostics::Exercise(int32 Index,const FString& Action)
                 if (!Target || Target->Health<=0) return TEXT("Combat fixture requires living players");
                 const bool Merc=Slot==1;const bool Takedown=Action.StartsWith(TEXT("takedown"));
                 FVector L(Merc?(Takedown?-1000.f:(Action==TEXT("duel_open")?-700.f:-450.f)):-1100.f,Action==TEXT("duel_blocked")?-400.f:-800.f,90.f);
+                if (W->GetMapName().Contains(TEXT("Warehouse")) && Takedown && Action!=TEXT("takedown_wall")) L=FVector(Merc?-200.f:-300.f,-1750.f,90.f);
                 if (!Merc && Action==TEXT("takedown_range")) L.X=-1200.f;
                 if (Action==TEXT("takedown_wall")) L.X=Merc?-100.f:-200.f;
                 const FRotator R(0,Merc && Action!=TEXT("takedown_rear") && Action!=TEXT("takedown_range") && Action!=TEXT("takedown_wall")?180.f:0.f,0);

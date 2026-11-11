@@ -21,5 +21,15 @@ __pycache__/
 # Reproducible animation authoring snapshots; retain locally.
 /Art/Grab/*.blend
 
+# Derived authoring snapshots; retain locally alongside reproducible FBX.
+/Art/ContactCharacters/*.blend
+/Art/FittedCharacters/*.blend
+
+/Art/Equipment/SpyEquipmentBase.blend
+/Art/UtilityRifle/MercUtilityEquip*.blend
+/Art/UtilityRifle/MercUtilityArms.blend
+
+/Art/Equipment/SpyEquip.blend
+
 # Recreate Epic example content from your own Unreal installation.
 /Content/Prototype/Mannequin/

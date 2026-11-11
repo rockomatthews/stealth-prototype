@@ -232,7 +232,8 @@ void ASPHUD::DrawHUD()
     else {Label(TEXT("Y   HANDS / SHOCKER"),Right+16*S,H-117*S,White,.75f);Label(FString::Printf(TEXT("RB  %s  %d%s"),P->SelectedGadget()==ESPSpyGadget::StickyCamera?TEXT("CAMERA"):TEXT("SPY BULLET"),P->GadgetAmmo(),P->GadgetAmmo()==0?TEXT(" EMPTY"):TEXT("")),Right+16*S,H-88*S,Accent,.72f);Label(FString::Printf(TEXT("CAM %d / DART %d   |   DOWN SELECT"),P->GadgetInventory.Cameras,P->GadgetInventory.TrackingDarts),Right+16*S,H-63*S,White,.58f);}
     if (GS->bPractice) Label(TEXT("D-PAD RIGHT  SWITCH ROLE    /    LEFT  INSPECT"),M,86*S,White,.59f);
     FString Context;
-    if (P->IsRestrained()) Context=P->IsCaptor()?TEXT("LS MOVE / RS TURN   |   TAP RT SNAP / HOLD RT FINISH   |   B RELEASE"):TEXT("GRABBED / VOICE LINK OPEN");
+    if (P->IsChokeVictim()) Context=FString::Printf(TEXT("BACK CHOKE %.1f | LS MOVE / RS AIM / RT FIRE / RB GRENADE"),FMath::Max(0.f,5.f-(P->ServerNow()-P->Grab.FinishStartedAt)));
+    else if (P->IsRestrained()) Context=P->IsCaptor()?TEXT("LS MOVE / RS TURN   |   TAP RT SNAP / HOLD RT FINISH   |   B RELEASE"):TEXT("GRABBED / VOICE LINK OPEN");
     else if (P->Traversal()->IsOnRope()) Context=TEXT("LS UP / DOWN    |    B DROP");
     else if (P->IsInsideVent()) Context=TEXT("VENT ROUTE   /   UP NIGHT VISION   /   A GRAB ROPE AT MOUTH");
     else if (P->IsThrowingGrenade()) Context=TEXT("FRAG OUT");
@@ -249,17 +250,39 @@ void ASPHUD::DrawHUD()
     {
         const FVector2D C(W*.5f,H*.5f);const float R=FMath::Clamp(P->ReticleGap(),7.f,28.f)*S;
         auto Line=[&](FVector2D A,FVector2D B,FLinearColor Color,float Thick){DrawLine(A.X,A.Y,B.X,B.Y,Ink,Thick+2*S);DrawLine(A.X,A.Y,B.X,B.Y,Color,Thick);};
-        for (int32 Q=0;Q<4;++Q) for (int32 I=0;I<9;++I)
+        if (!P->IsSpy())
         {
-            const float A=FMath::DegreesToRadians(Q*90.f+20+I*5.5f),B=A+FMath::DegreesToRadians(5.5f);
-            Line(C+FVector2D(FMath::Cos(A),FMath::Sin(A))*R,C+FVector2D(FMath::Cos(B),FMath::Sin(B))*R,White,1.1f*S);
+            const FLinearColor Amber(1.f,.67f,.16f,.88f);
+            const float Radius=(P->IsAiming()?28.f:36.f)*S+FMath::Min(5.f,P->GetVelocity().Size2D()*.012f)*S;
+            for (int32 Pass=0;Pass<2;++Pass) for (int32 Ring=0;Ring<2;++Ring) for (int32 Side=0;Side<2;++Side) for (int32 I=0;I<28;++I)
+            {
+                const float A=FMath::DegreesToRadians(Side*180.f+8.f+I*5.86f),B=A+FMath::DegreesToRadians(5.86f),Rad=Radius-Ring*5.f*S;
+                const FVector2D Start=C+FVector2D(FMath::Cos(A),FMath::Sin(A))*Rad,End=C+FVector2D(FMath::Cos(B),FMath::Sin(B))*Rad;
+                DrawLine(Start.X,Start.Y,End.X,End.Y,Pass?Amber:Ink,((Ring?1.1f:1.8f)+(Pass?0.f:2.f))*S);
+            }
+            DrawRect(Ink,C.X-2.5f*S,C.Y-2.5f*S,5*S,5*S);DrawRect(Amber,C.X-1.5f*S,C.Y-1.5f*S,3*S,3*S);
         }
-        DrawRect(Ink,C.X-2*S,C.Y-2*S,4*S,4*S);DrawRect(White,C.X-S,C.Y-S,2*S,2*S);
+        else
+        {
+            for (int32 Q=0;Q<4;++Q) for (int32 I=0;I<9;++I)
+            {
+                const float A=FMath::DegreesToRadians(Q*90.f+20+I*5.5f),B=A+FMath::DegreesToRadians(5.5f);
+                Line(C+FVector2D(FMath::Cos(A),FMath::Sin(A))*R,C+FVector2D(FMath::Cos(B),FMath::Sin(B))*R,White,1.1f*S);
+            }
+            DrawRect(Ink,C.X-2*S,C.Y-2*S,4*S,4*S);DrawRect(White,C.X-S,C.Y-S,2*S,2*S);
+        }
         if (!P->IsSpy() && P->ServerNow()-P->LastHeardNoise<.75f)
         {
             const FVector D=FRotator(0,-P->GetBaseAimRotation().Yaw,0).RotateVector(P->HeardNoisePosition-P->GetActorLocation());
             const float A=FMath::RoundToFloat(FMath::Atan2(D.Y,D.X)/(PI/4))*(PI/4);const FVector2D N(FMath::Sin(A),-FMath::Cos(A));
-            const FVector2D At=C+N*(R+16*S);Line(At-N*4*S,At+N*4*S,Gold,3*S);
+            const FVector2D At=C+N*(R+35*S);
+            const float Bearing=FMath::Atan2(N.Y,N.X),Fade=FMath::Clamp(1.f-(P->ServerNow()-P->LastHeardNoise)/.75f,0.f,1.f);
+            FLinearColor Cue=Gold;Cue.A=Fade*.9f;
+            for (int32 Ring=0;Ring<3;++Ring) for (int32 I=0;I<16;++I)
+            {
+                const float ArcStart=Bearing+FMath::DegreesToRadians(-35.f+I*4.375f),ArcEnd=ArcStart+FMath::DegreesToRadians(4.375f),Radius=R+(12.f+Ring*7.f)*S;
+                DrawLine(C.X+FMath::Cos(ArcStart)*Radius,C.Y+FMath::Sin(ArcStart)*Radius,C.X+FMath::Cos(ArcEnd)*Radius,C.Y+FMath::Sin(ArcEnd)*Radius,Cue,1.8f*S);
+            }
             if (FMath::Abs(D.Z)>120) Label(D.Z>0?TEXT("^"):TEXT("v"),At.X-3*S,At.Y-16*S,Gold,.65f);
         }
         if ((P->Feedback==TEXT("Hit") || P->Feedback==TEXT("Target down")) && P->FeedbackUntil-GetWorld()->GetTimeSeconds()>1.8f)
@@ -285,13 +308,13 @@ void ASPPlayerController::ClientExercise_Implementation(const FString& Action)
     const TMap<FString,FKey> PadKeys={{TEXT("a"),EKeys::Gamepad_FaceButton_Bottom},{TEXT("b"),EKeys::Gamepad_FaceButton_Right},
         {TEXT("x"),EKeys::Gamepad_FaceButton_Left},{TEXT("y"),EKeys::Gamepad_FaceButton_Top},
         {TEXT("rt"),EKeys::Gamepad_RightTrigger},{TEXT("lt"),EKeys::Gamepad_LeftTrigger},
-        {TEXT("role"),EKeys::Gamepad_DPad_Right},{TEXT("equipment"),EKeys::Gamepad_DPad_Up},{TEXT("inspect"),EKeys::Gamepad_DPad_Left},{TEXT("camera"),EKeys::Gamepad_LeftShoulder},{TEXT("gadget"),EKeys::Gamepad_RightShoulder},{TEXT("select_gadget"),EKeys::Gamepad_DPad_Down},{TEXT("move"),EKeys::Gamepad_LeftY},{TEXT("back"),EKeys::Gamepad_LeftY},{TEXT("drift"),EKeys::Gamepad_LeftY},{TEXT("look"),EKeys::Gamepad_RightX},{TEXT("look_pitch"),EKeys::Gamepad_RightY},{TEXT("mic_mute"),EKeys::Gamepad_Special_Left}};
+        {TEXT("role"),EKeys::Gamepad_DPad_Right},{TEXT("equipment"),EKeys::Gamepad_DPad_Up},{TEXT("inspect"),EKeys::Gamepad_DPad_Left},{TEXT("camera"),EKeys::Gamepad_LeftShoulder},{TEXT("gadget"),EKeys::Gamepad_RightShoulder},{TEXT("select_gadget"),EKeys::Gamepad_DPad_Down},{TEXT("move"),EKeys::Gamepad_LeftY},{TEXT("sneak"),EKeys::Gamepad_LeftY},{TEXT("back"),EKeys::Gamepad_LeftY},{TEXT("drift"),EKeys::Gamepad_LeftY},{TEXT("look"),EKeys::Gamepad_RightX},{TEXT("look_pitch"),EKeys::Gamepad_RightY},{TEXT("mic_mute"),EKeys::Gamepad_Special_Left}};
     if (Action.StartsWith(TEXT("pad_")))
     {
         FString Button=Action.Mid(4);const bool Released=Button.RemoveFromEnd(TEXT("_up"));
         Button.RemoveFromEnd(TEXT("_down"));
         if (const FKey* Key=PadKeys.Find(Button))
-            InputKey(FInputKeyEventArgs::CreateSimulated(*Key,Key->IsAnalog()?IE_Axis:(Released?IE_Released:IE_Pressed),Released?0.f:(Button==TEXT("back")?-1.f:Button==TEXT("drift")?.1f:1.f)));
+            InputKey(FInputKeyEventArgs::CreateSimulated(*Key,Key->IsAnalog()?IE_Axis:(Released?IE_Released:IE_Pressed),Released?0.f:(Button==TEXT("back")?-1.f:Button==TEXT("sneak")?.3f:Button==TEXT("drift")?.1f:1.f)));
         return;
     }
     if (Action==TEXT("voice_probe")) {Voice->ProbeMicrophone();return;}

@@ -11,8 +11,10 @@ def imported(stem,name,kind,skel=None):
  opt.import_mesh=kind!='anim';opt.import_as_skeletal=kind!='static';opt.import_animations=kind=='anim'
  opt.import_materials=False;opt.import_textures=False;opt.create_physics_asset=False
  opt.mesh_type_to_import={'anim':unreal.FBXImportType.FBXIT_ANIMATION,'skeletal':unreal.FBXImportType.FBXIT_SKELETAL_MESH,'static':unreal.FBXImportType.FBXIT_STATIC_MESH}[kind]
+ opt.original_import_type=opt.mesh_type_to_import
  if skel:opt.skeleton=skel
  if kind=='skeletal':
+  opt.skeletal_mesh_import_data.set_editor_property('import_morph_targets',True)
   opt.skeletal_mesh_import_data.set_editor_property('update_skeleton_reference_pose',False);opt.skeletal_mesh_import_data.set_editor_property('use_t0_as_ref_pose',False)
  if kind=='static':
   opt.static_mesh_import_data.combine_meshes=True;opt.static_mesh_import_data.auto_generate_collision=False
@@ -20,8 +22,11 @@ def imported(stem,name,kind,skel=None):
  if kind=='anim':
   opt.anim_sequence_import_data.set_editor_property('animation_length',unreal.FBXAnimationLengthImportType.FBXALIT_EXPORTED_TIME)
   opt.anim_sequence_import_data.set_editor_property('remove_redundant_keys',False)
+ if kind=='skeletal' and EL.does_asset_exist(DEST+'/'+name):
+  existing=unreal.load_asset(DEST+'/'+name);data=existing.get_editor_property('asset_import_data')
+  if isinstance(data,unreal.FbxSkeletalMeshImportData):data.set_editor_property('import_morph_targets',True)
  task=unreal.AssetImportTask();task.filename=str(SOURCE/(stem+'.fbx'));task.destination_path=DEST;task.destination_name=name
- task.automated=True;task.save=True;task.replace_existing=True;task.options=opt;task.factory=unreal.FbxFactory()
+ task.automated=True;task.save=True;task.replace_existing=True;task.replace_existing_settings=True;task.options=opt;task.factory=unreal.FbxFactory() if kind!='skeletal' else None
  tools.import_asset_tasks([task]);objects=list(task.get_objects())
  obj=unreal.load_asset(DEST+'/'+name)
  if not obj:
